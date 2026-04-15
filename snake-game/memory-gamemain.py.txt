@@ -1,0 +1,134 @@
+import pygame
+import random
+import sys
+
+pygame.init()
+
+# Screen
+WIDTH, HEIGHT = 800, 600
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Memory Card Game")
+
+# Grid
+ROWS, COLS = 4, 4
+CARD_SIZE = 100
+PADDING = 20
+START_X = (WIDTH - (COLS * (CARD_SIZE + PADDING))) // 2
+START_Y = 100
+
+# Colors
+WHITE = (255, 255, 255)
+GRAY = (200, 200, 200)
+BLUE = (70, 130, 180)
+GREEN = (0, 200, 100)
+BLACK = (0, 0, 0)
+
+font = pygame.font.SysFont("Arial", 36)
+small_font = pygame.font.SysFont("Arial", 24)
+
+# Create pairs
+values = list(range(1, (ROWS * COLS)//2 + 1)) * 2
+random.shuffle(values)
+
+cards = []
+for i in range(ROWS * COLS):
+    row = i // COLS
+    col = i % COLS
+    x = START_X + col * (CARD_SIZE + PADDING)
+    y = START_Y + row * (CARD_SIZE + PADDING)
+    cards.append({
+        "rect": pygame.Rect(x, y, CARD_SIZE, CARD_SIZE),
+        "value": values[i],
+        "revealed": False,
+        "matched": False
+    })
+
+first_card = None
+second_card = None
+lock = False
+score = 0
+attempts = 0
+start_time = pygame.time.get_ticks()
+
+clock = pygame.time.Clock()
+
+running = True
+while running:
+    screen.fill(WHITE)
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_r:
+                random.shuffle(values)
+                for i, card in enumerate(cards):
+                    card["value"] = values[i]
+                    card["revealed"] = False
+                    card["matched"] = False
+                score = 0
+                attempts = 0
+                start_time = pygame.time.get_ticks()
+                first_card = None
+                second_card = None
+                lock = False
+
+        elif event.type == pygame.MOUSEBUTTONDOWN and not lock:
+            pos = event.pos
+            for card in cards:
+                if card["rect"].collidepoint(pos) and not card["revealed"]:
+                    card["revealed"] = True
+                    if not first_card:
+                        first_card = card
+                    elif not second_card:
+                        second_card = card
+                        attempts += 1
+                        lock = True
+
+    # Check match
+    if first_card and second_card:
+        pygame.time.delay(400)
+        if first_card["value"] == second_card["value"]:
+            first_card["matched"] = True
+            second_card["matched"] = True
+            score += 1
+        else:
+            first_card["revealed"] = False
+            second_card["revealed"] = False
+
+        first_card = None
+        second_card = None
+        lock = False
+
+    # Draw cards
+    for card in cards:
+        if card["revealed"] or card["matched"]:
+            pygame.draw.rect(screen, GREEN, card["rect"], border_radius=10)
+            text = font.render(str(card["value"]), True, BLACK)
+            screen.blit(text, (card["rect"].x + 30, card["rect"].y + 25))
+        else:
+            pygame.draw.rect(screen, BLUE, card["rect"], border_radius=10)
+
+    # UI
+    elapsed = (pygame.time.get_ticks() - start_time) // 1000
+    score_text = small_font.render(f"Matches: {score}", True, BLACK)
+    attempts_text = small_font.render(f"Attempts: {attempts}", True, BLACK)
+    time_text = small_font.render(f"Time: {elapsed}s", True, BLACK)
+    restart_text = small_font.render("Press R to Restart", True, GRAY)
+
+    screen.blit(score_text, (20, 20))
+    screen.blit(attempts_text, (20, 50))
+    screen.blit(time_text, (20, 80))
+    screen.blit(restart_text, (20, 110))
+
+    # Win condition
+    if score == (ROWS * COLS) // 2:
+        win_text = font.render("You Win!", True, GREEN)
+        screen.blit(win_text, (WIDTH//2 - 80, 40))
+
+    pygame.display.flip()
+    clock.tick(30)
+
+pygame.quit()
+sys.exit()
