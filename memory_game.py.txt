@@ -1,0 +1,410 @@
+import pygame
+import random
+import sys
+
+pygame.init()
+
+WIDTH, HEIGHT = 1000, 760
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Memory Match")
+clock = pygame.time.Clock()
+
+# Colors
+BG = (240, 230, 255)
+CARD_BACK = (124, 58, 237)
+CARD_FACE = (255, 255, 255)
+MATCH = (16, 185, 129)
+FAIL = (239, 68, 68)
+TEXT = (30, 27, 75)
+SUB = (109, 40, 217)
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+SOFT = (243, 240, 255)
+
+title_font = pygame.font.SysFont("arial", 42, bold=True)
+subtitle_font = pygame.font.SysFont("arial", 20)
+hud_font = pygame.font.SysFont("arial", 28, bold=True)
+hud_label_font = pygame.font.SysFont("arial", 15, bold=True)
+button_font = pygame.font.SysFont("arial", 20, bold=True)
+card_font = pygame.font.SysFont("segoe ui emoji", 36)
+win_title_font = pygame.font.SysFont("arial", 40, bold=True)
+win_big_font = pygame.font.SysFont("arial", 34, bold=True)
+
+EMOJIS = [
+    "🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮",
+    "🐷","🐸","🐵","🐔","🐧","🐦","🦆","🦅","🦉","🦇","🐺","🐗",
+    "🐴","🦄","🐝","🐛","🦋","🐌","🐞","🐜","🦟","🦗","🕷","🦂",
+    "🐢","🐍","🦎","🦖","🦕","🐙","🦑","🦐","🦞","🦀","🐡","🐠",
+    "🐟","🐬","🐳","🐋","🦈","🐊","🐅","🐆","🦓","🦍","🦧","🦣"
+]
+
+
+class Button:
+    def __init__(self, rect, text, fill, text_color, border=None):
+        self.rect = pygame.Rect(rect)
+        self.text = text
+        self.fill = fill
+        self.text_color = text_color
+        self.border = border if border else fill
+
+    def draw(self, surface, font, hover=False):
+        fill = self.fill
+        if hover:
+            fill = tuple(min(255, c + 10) for c in self.fill)
+        pygame.draw.rect(surface, fill, self.rect, border_radius=12)
+        pygame.draw.rect(surface, self.border, self.rect, 2, border_radius=12)
+        label = font.render(self.text, True, self.text_color)
+        label_rect = label.get_rect(center=self.rect.center)
+        surface.blit(label, label_rect)
+
+    def clicked(self, pos):
+        return self.rect.collidepoint(pos)
+
+
+class Card:
+    def __init__(self, rect, value):
+        self.rect = pygame.Rect(rect)
+        self.value = value
+        self.flipped = False
+        self.matched = False
+        self.wrong_until = 0
+
+    def is_wrong_anim(self):
+        return pygame.time.get_ticks() < self.wrong_until
+
+    def draw(self, surface):
+        draw_rect = self.rect.copy()
+
+        if self.is_wrong_anim():
+            offset = -6 if (pygame.time.get_ticks() // 90) % 2 == 0 else 6
+            draw_rect.x += offset
+
+        if self.flipped or self.matched:
+            fill = (209, 250, 229) if self.matched else CARD_FACE
+            border = MATCH if self.matched else (220, 220, 230)
+            pygame.draw.rect(surface, fill, draw_rect, border_radius=12)
+            pygame.draw.rect(surface, border, draw_rect, 2, border_radius=12)
+
+            value_surf = card_font.render(self.value, True, TEXT)
+            value_rect = value_surf.get_rect(center=draw_rect.center)
+            surface.blit(value_surf, value_rect)
+        else:
+            pygame.draw.rect(surface, CARD_BACK, draw_rect, border_radius=12)
+            pygame.draw.rect(surface, (255, 255, 255), draw_rect, 2, border_radius=12)
+            q_surf = hud_font.render("?", True, (255, 255, 255))
+            q_rect = q_surf.get_rect(center=draw_rect.center)
+            surface.blit(q_surf, q_rect)
+
+
+class MemoryGame:
+    def __init__(self):
+        self.best_moves = {8: None, 18: None, 32: None}
+        self.pairs = 8
+        self.cols = 4
+        self.cards = []
+        self.flipped_cards = []
+        self.matched = 0
+        self.moves = 0
+        self.seconds = 0
+        self.started = False
+        self.lock = False
+        self.peeking = False
+        self.peek_end_time = 0
+        self.check_end_time = 0
+        self.win_overlay = False
+
+        self.easy_btn = Button((260, 140, 150, 42), "Easy (4x4)", CARD_BACK, WHITE)
+        self.medium_btn = Button((425, 140, 170, 42), "Medium (6x6)", WHITE, TEXT, CARD_BACK)
+        self.hard_btn = Button((610, 140, 150, 42), "Hard (8x8)", WHITE, TEXT, CARD_BACK)
+
+        self.new_btn = Button((355, 690, 150, 46), "New Game", CARD_BACK, WHITE)
+        self.peek_btn = Button((520, 690, 130, 46), "Peek", WHITE, TEXT, CARD_BACK)
+
+        self.new_game()
+
+    def set_difficulty(self, pairs, cols):
+        self.pairs = pairs
+        self.cols = cols
+        self.new_game()
+
+    def current_card_size(self):
+        if self.cols == 4:
+            return 95
+        if self.cols == 6:
+            return 78
+        return 68
+
+    def new_game(self):
+        self.cards = []
+        self.flipped_cards = []
+        self.matched = 0
+        self.moves = 0
+        self.seconds = 0
+        self.started = False
+        self.lock = False
+        self.peeking = False
+        self.peek_end_time = 0
+        self.check_end_time = 0
+        self.win_overlay = False
+
+        choices = random.sample(EMOJIS, self.pairs)
+        values = choices * 2
+        random.shuffle(values)
+
+        card_size = self.current_card_size()
+        gap = 10
+        total_cards = self.pairs * 2
+        rows = total_cards // self.cols
+
+        grid_width = self.cols * card_size + (self.cols - 1) * gap
+        grid_height = rows * card_size + (rows - 1) * gap
+
+        start_x = (WIDTH - grid_width) // 2
+        start_y = 220
+
+        idx = 0
+        for row in range(rows):
+            for col in range(self.cols):
+                rect = pygame.Rect(
+                    start_x + col * (card_size + gap),
+                    start_y + row * (card_size + gap),
+                    card_size,
+                    card_size
+                )
+                self.cards.append(Card(rect, values[idx]))
+                idx += 1
+
+    def update(self):
+        if self.started and not self.win_overlay and not self.lock:
+            pass
+
+        if self.started and not self.win_overlay:
+            # advance timer once a second using get_ticks
+            current_ticks = pygame.time.get_ticks()
+            if not hasattr(self, "last_second_tick"):
+                self.last_second_tick = current_ticks
+            if current_ticks - self.last_second_tick >= 1000:
+                self.seconds += 1
+                self.last_second_tick += 1000
+
+        if self.peeking and pygame.time.get_ticks() >= self.peek_end_time:
+            for card in self.cards:
+                if not card.matched:
+                    card.flipped = False
+            self.peeking = False
+            self.lock = False
+
+        if self.check_end_time and pygame.time.get_ticks() >= self.check_end_time:
+            self.finish_turn()
+            self.check_end_time = 0
+
+    def flip_card(self, pos):
+        if self.lock or self.win_overlay:
+            return
+
+        for card in self.cards:
+            if card.rect.collidepoint(pos) and not card.flipped and not card.matched:
+                if not self.started:
+                    self.started = True
+                    self.last_second_tick = pygame.time.get_ticks()
+
+                card.flipped = True
+                self.flipped_cards.append(card)
+
+                if len(self.flipped_cards) == 2:
+                    self.moves += 1
+                    self.lock = True
+                    self.check_end_time = pygame.time.get_ticks() + 700
+                break
+
+    def finish_turn(self):
+        if len(self.flipped_cards) != 2:
+            self.lock = False
+            return
+
+        a, b = self.flipped_cards
+
+        if a.value == b.value:
+            a.matched = True
+            b.matched = True
+            self.matched += 1
+            self.flipped_cards = []
+            self.lock = False
+
+            if self.matched == self.pairs:
+                self.win()
+        else:
+            a.wrong_until = pygame.time.get_ticks() + 350
+            b.wrong_until = pygame.time.get_ticks() + 350
+            a.flipped = False
+            b.flipped = False
+            self.flipped_cards = []
+            self.lock = False
+
+    def win(self):
+        self.win_overlay = True
+        best = self.best_moves[self.pairs]
+        if best is None or self.moves < best:
+            self.best_moves[self.pairs] = self.moves
+
+    def reveal_all(self):
+        if self.peeking or self.lock or self.win_overlay:
+            return
+
+        self.peeking = True
+        self.lock = True
+        self.peek_end_time = pygame.time.get_ticks() + 1200
+
+        for card in self.cards:
+            if not card.matched:
+                card.flipped = True
+
+    def timer_text(self):
+        mins = self.seconds // 60
+        secs = self.seconds % 60
+        return f"{mins}:{secs:02d}"
+
+    def draw_hud_box(self, x, label, value):
+        rect = pygame.Rect(x, 72, 140, 62)
+        pygame.draw.rect(screen, WHITE, rect, border_radius=14)
+        pygame.draw.rect(screen, (225, 218, 245), rect, 2, border_radius=14)
+        draw_center_text(value, hud_font, TEXT, rect.centerx, rect.y + 22)
+        draw_center_text(label.upper(), hud_label_font, SUB, rect.centerx, rect.y + 48)
+
+    def draw(self):
+        screen.fill(BG)
+
+        draw_center_text("Memory Match", title_font, TEXT, WIDTH // 2, 35)
+        draw_center_text("Find all the matching pairs!", subtitle_font, SUB, WIDTH // 2, 72)
+
+        self.draw_hud_box(130, "Moves", str(self.moves))
+        self.draw_hud_box(300, "Matched", str(self.matched))
+        self.draw_hud_box(470, "Time", self.timer_text())
+        self.draw_hud_box(640, "Best", str(self.best_moves[self.pairs]) if self.best_moves[self.pairs] is not None else "-")
+
+        self.draw_diff_buttons()
+
+        for card in self.cards:
+            card.draw(screen)
+
+        mouse = pygame.mouse.get_pos()
+        self.new_btn.draw(screen, button_font, self.new_btn.rect.collidepoint(mouse))
+        self.peek_btn.draw(screen, button_font, self.peek_btn.rect.collidepoint(mouse))
+
+        if self.win_overlay:
+            self.draw_win_overlay()
+
+    def draw_diff_buttons(self):
+        mouse = pygame.mouse.get_pos()
+
+        buttons = [
+            (self.easy_btn, self.pairs == 8),
+            (self.medium_btn, self.pairs == 18),
+            (self.hard_btn, self.pairs == 32),
+        ]
+
+        for btn, active in buttons:
+            if active:
+                fill = CARD_BACK
+                text_color = WHITE
+                border = CARD_BACK
+            else:
+                fill = WHITE
+                text_color = TEXT
+                border = CARD_BACK
+
+            pygame.draw.rect(screen, fill, btn.rect, border_radius=20)
+            pygame.draw.rect(screen, border, btn.rect, 2, border_radius=20)
+            label = button_font.render(btn.text, True, text_color)
+            label_rect = label.get_rect(center=btn.rect.center)
+            screen.blit(label, label_rect)
+
+    def draw_win_overlay(self):
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((240, 230, 255, 235))
+        screen.blit(overlay, (0, 0))
+
+        draw_center_text("You Won!", win_title_font, TEXT, WIDTH // 2, 210)
+        draw_center_text(f"All {self.pairs} pairs matched!", subtitle_font, SUB, WIDTH // 2, 255)
+
+        stats = [
+            (str(self.moves), "Moves"),
+            (self.timer_text(), "Time"),
+            (str(self.best_moves[self.pairs]), "Best"),
+        ]
+
+        start_x = WIDTH // 2 - 240
+        for i, (value, label) in enumerate(stats):
+            rect = pygame.Rect(start_x + i * 170, 310, 140, 90)
+            pygame.draw.rect(screen, WHITE, rect, border_radius=14)
+            pygame.draw.rect(screen, (225, 218, 245), rect, 2, border_radius=14)
+            draw_center_text(value, win_big_font, CARD_BACK, rect.centerx, rect.y + 30)
+            draw_center_text(label.upper(), hud_label_font, SUB, rect.centerx, rect.y + 64)
+
+        play_again = Button((WIDTH // 2 - 90, 455, 180, 50), "Play Again", CARD_BACK, WHITE)
+        mouse = pygame.mouse.get_pos()
+        play_again.draw(screen, button_font, play_again.rect.collidepoint(mouse))
+        self.play_again_btn = play_again
+
+    def handle_click(self, pos):
+        if self.win_overlay:
+            if hasattr(self, "play_again_btn") and self.play_again_btn.clicked(pos):
+                self.new_game()
+            return
+
+        if self.easy_btn.clicked(pos):
+            self.set_difficulty(8, 4)
+            return
+        if self.medium_btn.clicked(pos):
+            self.set_difficulty(18, 6)
+            return
+        if self.hard_btn.clicked(pos):
+            self.set_difficulty(32, 8)
+            return
+
+        if self.new_btn.clicked(pos):
+            self.new_game()
+            return
+
+        if self.peek_btn.clicked(pos):
+            self.reveal_all()
+            return
+
+        self.flip_card(pos)
+
+
+def draw_center_text(text, font, color, x, y):
+    surf = font.render(text, True, color)
+    rect = surf.get_rect(center=(x, y))
+    screen.blit(surf, rect)
+
+
+def main():
+    game = MemoryGame()
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
+                if event.key == pygame.K_r:
+                    game.new_game()
+                if event.key == pygame.K_p:
+                    game.reveal_all()
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                game.handle_click(event.pos)
+
+        game.update()
+        game.draw()
+        pygame.display.flip()
+        clock.tick(60)
+
+
+if __name__ == "__main__":
+    main()

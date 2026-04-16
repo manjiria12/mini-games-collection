@@ -1,0 +1,430 @@
+import pygame
+import sys
+import random
+
+pygame.init()
+
+WIDTH, HEIGHT = 800, 700
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Tic Tac Toe")
+clock = pygame.time.Clock()
+
+# Colors
+BG = (15, 15, 15)
+SURFACE = (26, 26, 26)
+BORDER = (46, 46, 46)
+X_COLOR = (255, 77, 77)
+O_COLOR = (77, 195, 255)
+WIN_COLOR = (255, 215, 0)
+TEXT = (240, 240, 240)
+SUB = (102, 102, 102)
+WHITE = (255, 255, 255)
+
+title_font = pygame.font.SysFont("arial", 52, bold=True)
+subtitle_font = pygame.font.SysFont("arial", 18)
+mode_font = pygame.font.SysFont("arial", 20, bold=True)
+score_name_font = pygame.font.SysFont("arial", 14, bold=True)
+score_val_font = pygame.font.SysFont("arial", 30, bold=True)
+status_font = pygame.font.SysFont("arial", 24, bold=True)
+button_font = pygame.font.SysFont("arial", 18, bold=True)
+cell_font = pygame.font.SysFont("arial", 86, bold=True)
+small_font = pygame.font.SysFont("arial", 15, bold=True)
+
+WINS = [
+    (0, 1, 2), (3, 4, 5), (6, 7, 8),
+    (0, 3, 6), (1, 4, 7), (2, 5, 8),
+    (0, 4, 8), (2, 4, 6)
+]
+
+
+class Button:
+    def __init__(self, rect, text):
+        self.rect = pygame.Rect(rect)
+        self.text = text
+
+    def draw(self, fill, border, text_color, font, hover=False):
+        draw_fill = fill
+        if hover:
+            draw_fill = tuple(min(255, c + 12) for c in fill)
+        pygame.draw.rect(screen, draw_fill, self.rect, border_radius=8)
+        pygame.draw.rect(screen, border, self.rect, 2, border_radius=8)
+        label = font.render(self.text, True, text_color)
+        label_rect = label.get_rect(center=self.rect.center)
+        screen.blit(label, label_rect)
+
+    def clicked(self, pos):
+        return self.rect.collidepoint(pos)
+
+
+class TicTacToeGame:
+    def __init__(self):
+        self.board = [None] * 9
+        self.current = "X"
+        self.mode = "ai"
+        self.ai_diff = "easy"
+        self.scores = {"X": 0, "O": 0, "D": 0}
+        self.game_over = False
+        self.ai_thinking = False
+        self.win_combo = None
+        self.ai_move_time = 0
+
+        self.mode_ai_btn = Button((250, 120, 120, 38), "vs AI")
+        self.mode_2p_btn = Button((385, 120, 140, 38), "2 Players")
+
+        self.ai_easy_btn = Button((310, 170, 90, 30), "Easy")
+        self.ai_medium_btn = Button((410, 170, 110, 30), "Medium")
+        self.ai_hard_btn = Button((530, 170, 130, 30), "Unbeatable")
+
+        self.new_round_btn = Button((270, 640, 120, 40), "New Round")
+        self.reset_all_btn = Button((410, 640, 120, 40), "Reset All")
+
+        self.board_rects = []
+        self.build_board_rects()
+
+    def build_board_rects(self):
+        self.board_rects = []
+        start_x = WIDTH // 2 - 155
+        start_y = 250
+        size = 100
+        gap = 10
+
+        for row in range(3):
+            for col in range(3):
+                rect = pygame.Rect(
+                    start_x + col * (size + gap),
+                    start_y + row * (size + gap),
+                    size,
+                    size
+                )
+                self.board_rects.append(rect)
+
+    def set_mode(self, mode):
+        self.mode = mode
+        self.reset_all()
+
+    def set_ai_diff(self, diff):
+        self.ai_diff = diff
+        self.reset_board()
+
+    def reset_board(self):
+        self.board = [None] * 9
+        self.current = "X"
+        self.game_over = False
+        self.ai_thinking = False
+        self.win_combo = None
+        self.ai_move_time = 0
+
+    def reset_all(self):
+        self.scores = {"X": 0, "O": 0, "D": 0}
+        self.reset_board()
+
+    def status_text(self):
+        if self.game_over:
+            if self.win_combo:
+                winner = self.board[self.win_combo[0]]
+                if self.mode == "ai":
+                    return "You win! 🎉" if winner == "X" else "AI wins! 🤖"
+                return f"Player {winner} wins! 🎉"
+            return "Draw! 🤝"
+
+        if self.mode == "ai":
+            return "Your turn (X)" if self.current == "X" else "AI is thinking..."
+        return f"Player {self.current}'s turn"
+
+    def check_win_on(self, board):
+        for a, b, c in WINS:
+            if board[a] and board[a] == board[b] == board[c]:
+                return board[a]
+        return None
+
+    def check_win_combo(self):
+        for combo in WINS:
+            a, b, c = combo
+            if self.board[a] and self.board[a] == self.board[b] == self.board[c]:
+                return combo
+        return None
+
+    def empty_indices(self, board=None):
+        board = board if board is not None else self.board
+        return [i for i, v in enumerate(board) if v is None]
+
+    def minimax(self, board, player, depth=0, alpha=-float("inf"), beta=float("inf")):
+        winner = self.check_win_on(board)
+
+        if winner == "O":
+            return {"score": 10 - depth}
+        if winner == "X":
+            return {"score": depth - 10}
+
+        empties = self.empty_indices(board)
+        if not empties:
+            return {"score": 0}
+
+        if player == "O":
+            best = {"score": -float("inf"), "idx": None}
+            for idx in empties:
+                new_board = board[:]
+                new_board[idx] = "O"
+                result = self.minimax(new_board, "X", depth + 1, alpha, beta)
+                result["idx"] = idx
+
+                if result["score"] > best["score"]:
+                    best = result
+
+                alpha = max(alpha, result["score"])
+                if beta <= alpha:
+                    break
+            return best
+        else:
+            best = {"score": float("inf"), "idx": None}
+            for idx in empties:
+                new_board = board[:]
+                new_board[idx] = "X"
+                result = self.minimax(new_board, "O", depth + 1, alpha, beta)
+                result["idx"] = idx
+
+                if result["score"] < best["score"]:
+                    best = result
+
+                beta = min(beta, result["score"])
+                if beta <= alpha:
+                    break
+            return best
+
+    def get_ai_move(self):
+        empties = self.empty_indices()
+        if not empties:
+            return None
+
+        if self.ai_diff == "easy":
+            return random.choice(empties)
+
+        if self.ai_diff == "medium" and random.random() < 0.3:
+            return random.choice(empties)
+
+        return self.minimax(self.board[:], "O")["idx"]
+
+    def make_move(self, idx):
+        if self.board[idx] or self.game_over or self.ai_thinking:
+            return
+
+        if self.mode == "ai" and self.current == "O":
+            return
+
+        self.board[idx] = self.current
+        self.finish_turn()
+
+    def finish_turn(self):
+        combo = self.check_win_combo()
+        if combo:
+            self.game_over = True
+            self.win_combo = combo
+            winner = self.board[combo[0]]
+            self.scores[winner] += 1
+            return
+
+        if all(v is not None for v in self.board):
+            self.game_over = True
+            self.scores["D"] += 1
+            return
+
+        self.current = "O" if self.current == "X" else "X"
+
+        if self.mode == "ai" and self.current == "O" and not self.game_over:
+            self.ai_thinking = True
+            self.ai_move_time = pygame.time.get_ticks() + 400
+
+    def update(self):
+        if self.ai_thinking and pygame.time.get_ticks() >= self.ai_move_time:
+            self.ai_thinking = False
+            move = self.get_ai_move()
+            if move is not None:
+                self.board[move] = "O"
+                self.finish_turn()
+
+    def draw_title(self):
+        tic = title_font.render("TIC", True, X_COLOR)
+        tac = title_font.render("TAC", True, O_COLOR)
+        toe = title_font.render("TOE", True, TEXT)
+
+        total_width = tic.get_width() + tac.get_width() + toe.get_width() + 20
+        start_x = WIDTH // 2 - total_width // 2
+        y = 25
+
+        screen.blit(tic, (start_x, y))
+        screen.blit(tac, (start_x + tic.get_width() + 10, y))
+        screen.blit(toe, (start_x + tic.get_width() + tac.get_width() + 20, y))
+
+        subtitle = subtitle_font.render("Classic game · AI powered", True, SUB)
+        screen.blit(subtitle, subtitle.get_rect(center=(WIDTH // 2, 95)))
+
+    def draw_mode_buttons(self):
+        mouse = pygame.mouse.get_pos()
+
+        for btn, active in [
+            (self.mode_ai_btn, self.mode == "ai"),
+            (self.mode_2p_btn, self.mode == "2p")
+        ]:
+            fill = SURFACE if active else BG
+            text_color = TEXT if active else SUB
+            border = (85, 85, 85) if active else BORDER
+            btn.draw(fill, border, text_color, mode_font, btn.rect.collidepoint(mouse))
+
+    def draw_ai_buttons(self):
+        if self.mode != "ai":
+            return
+
+        label = small_font.render("AI Difficulty:", True, SUB)
+        screen.blit(label, (280, 175))
+
+        mouse = pygame.mouse.get_pos()
+
+        for btn, diff in [
+            (self.ai_easy_btn, "easy"),
+            (self.ai_medium_btn, "medium"),
+            (self.ai_hard_btn, "hard")
+        ]:
+            active = self.ai_diff == diff
+            fill = (30, 30, 30) if active else BG
+            text_color = TEXT if active else SUB
+            border = (85, 85, 85) if active else BORDER
+            btn.draw(fill, border, text_color, small_font, btn.rect.collidepoint(mouse))
+
+    def draw_scoreboard(self):
+        x_box = pygame.Rect(215, 210, 95, 70)
+        o_box = pygame.Rect(490, 210, 95, 70)
+
+        x_active = self.current == "X" and not self.game_over
+        o_active = self.current == "O" and not self.game_over
+
+        for rect, active in [(x_box, x_active), (o_box, o_active)]:
+            pygame.draw.rect(screen, SURFACE, rect, border_radius=10)
+            pygame.draw.rect(screen, (85, 85, 85) if active else BORDER, rect, 2, border_radius=10)
+
+        name_x = "YOU" if self.mode == "ai" else "P1"
+        name_o = "AI" if self.mode == "ai" else "P2"
+
+        draw_center(screen, name_x, score_name_font, SUB, x_box.centerx, x_box.y + 18)
+        draw_center(screen, str(self.scores["X"]), score_val_font, X_COLOR, x_box.centerx, x_box.y + 48)
+
+        draw_center(screen, "VS", mode_font, SUB, WIDTH // 2, 230)
+        draw_center(screen, str(self.scores["D"]), mode_font, TEXT, WIDTH // 2, 256)
+        draw_center(screen, "Draws", score_name_font, SUB, WIDTH // 2, 275)
+
+        draw_center(screen, name_o, score_name_font, SUB, o_box.centerx, o_box.y + 18)
+        draw_center(screen, str(self.scores["O"]), score_val_font, O_COLOR, o_box.centerx, o_box.y + 48)
+
+    def draw_board(self):
+        mouse = pygame.mouse.get_pos()
+
+        for i, rect in enumerate(self.board_rects):
+            value = self.board[i]
+            hovered = rect.collidepoint(mouse) and value is None and not self.game_over and not self.ai_thinking
+            fill = (34, 34, 34) if hovered else SURFACE
+            border = BORDER
+
+            if self.win_combo and i in self.win_combo:
+                fill = (37, 37, 0)
+                border = WIN_COLOR
+
+            pygame.draw.rect(screen, fill, rect, border_radius=12)
+            pygame.draw.rect(screen, border, rect, 2, border_radius=12)
+
+            if value:
+                color = X_COLOR if value == "X" else O_COLOR
+                if self.win_combo and i in self.win_combo:
+                    color = WIN_COLOR
+                draw_center(screen, value, cell_font, color, rect.centerx, rect.centery)
+
+    def draw_status(self):
+        text = self.status_text()
+        color = SUB
+        if not self.game_over:
+            color = X_COLOR if self.current == "X" else O_COLOR
+        elif self.win_combo:
+            color = WIN_COLOR
+
+        draw_center(screen, text, status_font, color, WIDTH // 2, 590)
+
+    def draw_bottom_buttons(self):
+        mouse = pygame.mouse.get_pos()
+        self.new_round_btn.draw(BG, (85, 85, 85), TEXT, button_font, self.new_round_btn.rect.collidepoint(mouse))
+        self.reset_all_btn.draw(BG, BORDER, TEXT, button_font, self.reset_all_btn.rect.collidepoint(mouse))
+
+    def draw(self):
+        screen.fill(BG)
+        self.draw_title()
+        self.draw_mode_buttons()
+        self.draw_ai_buttons()
+        self.draw_scoreboard()
+        self.draw_board()
+        self.draw_status()
+        self.draw_bottom_buttons()
+
+    def handle_click(self, pos):
+        if self.mode_ai_btn.clicked(pos):
+            self.set_mode("ai")
+            return
+        if self.mode_2p_btn.clicked(pos):
+            self.set_mode("2p")
+            return
+
+        if self.mode == "ai":
+            if self.ai_easy_btn.clicked(pos):
+                self.set_ai_diff("easy")
+                return
+            if self.ai_medium_btn.clicked(pos):
+                self.set_ai_diff("medium")
+                return
+            if self.ai_hard_btn.clicked(pos):
+                self.set_ai_diff("hard")
+                return
+
+        if self.new_round_btn.clicked(pos):
+            self.reset_board()
+            return
+
+        if self.reset_all_btn.clicked(pos):
+            self.reset_all()
+            return
+
+        for i, rect in enumerate(self.board_rects):
+            if rect.collidepoint(pos):
+                self.make_move(i)
+                return
+
+
+def draw_center(surface, text, font, color, x, y):
+    label = font.render(text, True, color)
+    rect = label.get_rect(center=(x, y))
+    surface.blit(label, rect)
+
+
+def main():
+    game = TicTacToeGame()
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
+                if event.key == pygame.K_r:
+                    game.reset_board()
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                game.handle_click(event.pos)
+
+        game.update()
+        game.draw()
+
+        pygame.display.flip()
+        clock.tick(60)
+
+
+if __name__ == "__main__":
+    main()

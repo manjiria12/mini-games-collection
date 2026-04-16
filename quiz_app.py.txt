@@ -1,0 +1,497 @@
+import pygame
+import random
+import sys
+
+pygame.init()
+
+WIDTH, HEIGHT = 900, 650
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Quiz Arena")
+clock = pygame.time.Clock()
+
+# Colors
+BG = (250, 248, 243)
+CARD = (255, 255, 255)
+ACCENT = (232, 71, 42)
+ACCENT2 = (42, 92, 232)
+TEXT = (26, 18, 8)
+SUB = (107, 96, 72)
+BORDER = (232, 224, 208)
+SUCCESS = (26, 158, 92)
+FAIL = (232, 71, 42)
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+
+title_font = pygame.font.SysFont("georgia", 42, bold=True)
+heading_font = pygame.font.SysFont("arial", 28, bold=True)
+question_font = pygame.font.SysFont("georgia", 28, bold=True)
+body_font = pygame.font.SysFont("arial", 22)
+small_font = pygame.font.SysFont("arial", 18)
+tiny_font = pygame.font.SysFont("arial", 15)
+big_font = pygame.font.SysFont("arial", 34, bold=True)
+
+DATA = {
+    "science": {
+        "icon": "SCI",
+        "name": "Science",
+        "questions": [
+            {"q": "What is the chemical symbol for gold?", "o": ["Au", "Ag", "Fe", "Cu"], "a": 0, "f": 'Au comes from the Latin word "Aurum".', "d": "easy"},
+            {"q": "How many bones are in the adult human body?", "o": ["196", "206", "216", "186"], "a": 1, "f": "Babies are born with about 270 bones; many fuse over time.", "d": "medium"},
+            {"q": "What is the speed of light (approx)?", "o": ["300,000 km/s", "150,000 km/s", "450,000 km/s", "600,000 km/s"], "a": 0, "f": "299,792,458 m/s to be exact.", "d": "easy"},
+            {"q": "What planet has the most moons?", "o": ["Jupiter", "Saturn", "Uranus", "Neptune"], "a": 1, "f": "Saturn has the most confirmed moons.", "d": "medium"},
+            {"q": "DNA stands for?", "o": ["Deoxyribose Nucleic Acid", "Dioxynucleic Acid", "Deoxyribonucleic Acid", "Diaminonucleic Acid"], "a": 2, "f": "DNA stands for Deoxyribonucleic Acid.", "d": "easy"},
+            {"q": "What is the powerhouse of the cell?", "o": ["Nucleus", "Mitochondria", "Ribosome", "Golgi body"], "a": 1, "f": "Mitochondria produce ATP via cellular respiration.", "d": "easy"},
+            {"q": "Which element has atomic number 79?", "o": ["Platinum", "Silver", "Gold", "Lead"], "a": 2, "f": "Gold has atomic number 79.", "d": "hard"},
+            {"q": "What is absolute zero in Celsius?", "o": ["-173.15°C", "-273.15°C", "-373.15°C", "-100°C"], "a": 1, "f": "0 Kelvin equals -273.15°C.", "d": "hard"},
+        ],
+    },
+    "history": {
+        "icon": "HIS",
+        "name": "History",
+        "questions": [
+            {"q": "In which year did World War II end?", "o": ["1943", "1944", "1945", "1946"], "a": 2, "f": "WWII ended in 1945.", "d": "easy"},
+            {"q": "Who was the first President of the United States?", "o": ["John Adams", "Benjamin Franklin", "Thomas Jefferson", "George Washington"], "a": 3, "f": "George Washington was the first U.S. president.", "d": "easy"},
+            {"q": "The Great Wall of China was primarily built during which dynasty?", "o": ["Han", "Tang", "Ming", "Qing"], "a": 2, "f": "Most of the visible wall dates to the Ming Dynasty.", "d": "medium"},
+            {"q": "In what year did the Berlin Wall fall?", "o": ["1987", "1988", "1989", "1991"], "a": 2, "f": "The Berlin Wall fell in 1989.", "d": "easy"},
+            {"q": 'Who wrote the "Communist Manifesto"?', "o": ["Lenin & Stalin", "Marx & Engels", "Mao & Lenin", "Engels & Stalin"], "a": 1, "f": "Karl Marx and Friedrich Engels wrote it.", "d": "medium"},
+            {"q": "The Renaissance began in which country?", "o": ["France", "England", "Italy", "Spain"], "a": 2, "f": "The Renaissance began in Italy.", "d": "medium"},
+            {"q": "The Magna Carta was signed in which year?", "o": ["1066", "1215", "1348", "1415"], "a": 1, "f": "The Magna Carta was signed in 1215.", "d": "hard"},
+        ],
+    },
+    "tech": {
+        "icon": "TEC",
+        "name": "Technology",
+        "questions": [
+            {"q": 'What does "HTTP" stand for?', "o": ["HyperText Transfer Protocol", "High Tech Transfer Program", "HyperText Transmission Process", "Hybrid Transfer Tech Protocol"], "a": 0, "f": "HTTP powers communication on the web.", "d": "easy"},
+            {"q": "Who created Python?", "o": ["Microsoft", "Guido van Rossum", "Google", "Sun Microsystems"], "a": 1, "f": "Python was created by Guido van Rossum.", "d": "medium"},
+            {"q": 'What does "CPU" stand for?', "o": ["Computer Processing Unit", "Central Processing Unit", "Core Processing Utility", "Central Program Unit"], "a": 1, "f": "CPU means Central Processing Unit.", "d": "easy"},
+            {"q": "In binary, what is 1010?", "o": ["8", "10", "12", "14"], "a": 1, "f": "1010 in binary equals 10.", "d": "medium"},
+            {"q": "What year was the first iPhone released?", "o": ["2005", "2006", "2007", "2008"], "a": 2, "f": "The original iPhone launched in 2007.", "d": "easy"},
+            {"q": "What is the main language used for web styling?", "o": ["HTML", "JavaScript", "CSS", "Python"], "a": 2, "f": "CSS controls how web pages look.", "d": "easy"},
+            {"q": 'What is "Big O" notation used for?', "o": ["Database indexing", "Algorithm complexity", "Memory allocation", "Network speed"], "a": 1, "f": "Big O measures algorithm growth.", "d": "hard"},
+        ],
+    },
+    "geo": {
+        "icon": "GEO",
+        "name": "Geography",
+        "questions": [
+            {"q": "What is the capital of Australia?", "o": ["Sydney", "Melbourne", "Canberra", "Brisbane"], "a": 2, "f": "Canberra is the capital of Australia.", "d": "medium"},
+            {"q": "Which is the longest river in the world?", "o": ["Amazon", "Congo", "Mississippi", "Nile"], "a": 3, "f": "The Nile is traditionally listed as the longest.", "d": "easy"},
+            {"q": "How many countries are in Africa?", "o": ["48", "54", "60", "66"], "a": 1, "f": "Africa has 54 recognized sovereign countries.", "d": "medium"},
+            {"q": "Mount Everest is part of which mountain range?", "o": ["Andes", "Rocky Mountains", "Himalayas", "Alps"], "a": 2, "f": "Everest is in the Himalayas.", "d": "easy"},
+            {"q": "What is the smallest country in the world?", "o": ["Monaco", "San Marino", "Liechtenstein", "Vatican City"], "a": 3, "f": "Vatican City is the smallest country.", "d": "easy"},
+            {"q": "Which ocean is the largest?", "o": ["Atlantic", "Indian", "Arctic", "Pacific"], "a": 3, "f": "The Pacific Ocean is the largest.", "d": "easy"},
+            {"q": "Which country has the longest coastline?", "o": ["Russia", "Australia", "Norway", "Canada"], "a": 3, "f": "Canada has the longest coastline.", "d": "hard"},
+        ],
+    },
+}
+
+
+class Button:
+    def __init__(self, rect, text, color=CARD, text_color=TEXT, border_color=BORDER):
+        self.rect = pygame.Rect(rect)
+        self.text = text
+        self.color = color
+        self.text_color = text_color
+        self.border_color = border_color
+
+    def draw(self, surface, font, hover=False):
+        fill = self.color
+        border = self.border_color
+        if hover:
+            fill = tuple(min(255, c + 8) for c in self.color)
+        pygame.draw.rect(surface, fill, self.rect, border_radius=14)
+        pygame.draw.rect(surface, border, self.rect, 2, border_radius=14)
+        label = font.render(self.text, True, self.text_color)
+        label_rect = label.get_rect(center=self.rect.center)
+        surface.blit(label, label_rect)
+
+    def clicked(self, pos):
+        return self.rect.collidepoint(pos)
+
+
+def draw_text(text, font, color, x, y, center=False):
+    surf = font.render(text, True, color)
+    rect = surf.get_rect()
+    if center:
+        rect.center = (x, y)
+    else:
+        rect.topleft = (x, y)
+    screen.blit(surf, rect)
+
+
+def wrap_text(text, font, color, rect, line_spacing=6):
+    words = text.split()
+    lines = []
+    current = ""
+
+    for word in words:
+        test = current + word + " "
+        if font.size(test)[0] <= rect.width:
+            current = test
+        else:
+            lines.append(current.strip())
+            current = word + " "
+    if current:
+        lines.append(current.strip())
+
+    y = rect.y
+    for line in lines:
+        surf = font.render(line, True, color)
+        screen.blit(surf, (rect.x, y))
+        y += font.get_height() + line_spacing
+
+
+class QuizApp:
+    def __init__(self):
+        self.state = "home"
+        self.selected_cat = "science"
+        self.difficulty = "easy"
+        self.questions = []
+        self.q_index = 0
+        self.score = 0
+        self.correct = 0
+        self.timings = []
+        self.current_time_limit = 20
+        self.question_start_ticks = 0
+        self.answered = False
+        self.feedback = ""
+        self.feedback_type = None
+        self.selected_option = None
+
+    def get_category_buttons(self):
+        buttons = []
+        start_x = 130
+        start_y = 180
+        w, h = 290, 95
+        gap_x, gap_y = 20, 18
+
+        items = list(DATA.items())
+        for i, (key, cat) in enumerate(items):
+            row = i // 2
+            col = i % 2
+            rect = pygame.Rect(start_x + col * (w + gap_x), start_y + row * (h + gap_y), w, h)
+            buttons.append((key, cat, rect))
+        return buttons
+
+    def get_diff_buttons(self):
+        labels = ["easy", "medium", "hard"]
+        buttons = []
+        start_x = WIDTH // 2 - 170
+        y = 410
+        w = 100
+        h = 40
+        gap = 18
+        for i, label in enumerate(labels):
+            rect = pygame.Rect(start_x + i * (w + gap), y, w, h)
+            buttons.append((label, rect))
+        return buttons
+
+    def start_quiz(self):
+        pool = [q for q in DATA[self.selected_cat]["questions"] if q["d"] == self.difficulty]
+        if not pool:
+            return
+        random.shuffle(pool)
+        self.questions = pool[: min(10, len(pool))]
+        self.q_index = 0
+        self.score = 0
+        self.correct = 0
+        self.timings = []
+        self.state = "quiz"
+        self.load_question()
+
+    def load_question(self):
+        if self.q_index >= len(self.questions):
+            self.state = "results"
+            return
+
+        self.answered = False
+        self.feedback = ""
+        self.feedback_type = None
+        self.selected_option = None
+        self.current_time_limit = 20 if self.difficulty == "easy" else 15 if self.difficulty == "medium" else 10
+        self.question_start_ticks = pygame.time.get_ticks()
+
+    def current_question(self):
+        if self.q_index < len(self.questions):
+            return self.questions[self.q_index]
+        return None
+
+    def remaining_time(self):
+        elapsed_ms = pygame.time.get_ticks() - self.question_start_ticks
+        remaining = self.current_time_limit - elapsed_ms // 1000
+        return max(0, remaining)
+
+    def option_buttons(self):
+        buttons = []
+        start_x = 120
+        start_y = 305
+        w = 300
+        h = 65
+        gap_x = 20
+        gap_y = 18
+        q = self.current_question()
+        if not q:
+            return buttons
+
+        for i, option in enumerate(q["o"]):
+            row = i // 2
+            col = i % 2
+            rect = pygame.Rect(start_x + col * (w + gap_x), start_y + row * (h + gap_y), w, h)
+            buttons.append((i, option, rect))
+        return buttons
+
+    def next_question(self):
+        self.q_index += 1
+        if self.q_index >= len(self.questions):
+            self.state = "results"
+        else:
+            self.load_question()
+
+    def handle_timeout(self):
+        if self.answered:
+            return
+        self.answered = True
+        q = self.current_question()
+        self.feedback = "Time's up! " + q["f"]
+        self.feedback_type = "wrong"
+        self.timings.append(self.current_time_limit)
+
+    def answer_question(self, idx):
+        if self.answered:
+            return
+
+        q = self.current_question()
+        self.answered = True
+        self.selected_option = idx
+
+        elapsed = self.current_time_limit - self.remaining_time()
+        self.timings.append(elapsed)
+
+        if idx == q["a"]:
+            self.correct += 1
+            bonus = self.remaining_time()
+            points = 10 + bonus
+            self.score += points
+            self.feedback = f"Correct! (+{points} pts) {q['f']}"
+            self.feedback_type = "correct"
+        else:
+            self.feedback = "Incorrect. " + q["f"]
+            self.feedback_type = "wrong"
+
+    def replay(self):
+        self.start_quiz()
+
+    def go_home(self):
+        self.state = "home"
+
+    def draw_home(self):
+        draw_text("Quiz Arena", title_font, TEXT, WIDTH // 2, 80, center=True)
+        draw_text("Test your knowledge. Beat your score.", body_font, SUB, WIDTH // 2, 125, center=True)
+
+        for key, cat, rect in self.get_category_buttons():
+            selected = key == self.selected_cat
+            fill = (255, 245, 240) if selected else CARD
+            border = ACCENT if selected else BORDER
+            pygame.draw.rect(screen, fill, rect, border_radius=14)
+            pygame.draw.rect(screen, border, rect, 2, border_radius=14)
+
+            draw_text(cat["icon"], heading_font, TEXT, rect.x + 15, rect.y + 12)
+            draw_text(cat["name"], body_font, TEXT, rect.x + 15, rect.y + 44)
+            draw_text(f"{len(cat['questions'])} questions", tiny_font, SUB, rect.x + 15, rect.y + 70)
+
+        for label, rect in self.get_diff_buttons():
+            active = label == self.difficulty
+            fill = TEXT if active else BG
+            txt = WHITE if active else TEXT
+            pygame.draw.rect(screen, fill, rect, border_radius=20)
+            pygame.draw.rect(screen, TEXT if active else BORDER, rect, 2, border_radius=20)
+            draw_text(label.capitalize(), small_font, txt, rect.centerx, rect.centery, center=True)
+
+        start_rect = pygame.Rect(WIDTH // 2 - 170, 485, 340, 54)
+        pygame.draw.rect(screen, ACCENT, start_rect, border_radius=12)
+        draw_text("Start Quiz", body_font, WHITE, start_rect.centerx, start_rect.centery, center=True)
+
+    def draw_quiz(self):
+        q = self.current_question()
+        if not q:
+            return
+
+        draw_text(f"Q {self.q_index + 1} / {len(self.questions)}", tiny_font, SUB, 120, 50)
+
+        rem = self.remaining_time()
+        timer_color = FAIL if rem <= 5 else TEXT
+        draw_text(f"Time: {rem}s", body_font, timer_color, WIDTH - 180, 45)
+
+        # Progress
+        pygame.draw.rect(screen, BORDER, (120, 80, 660, 6), border_radius=3)
+        progress = int((self.q_index / max(1, len(self.questions))) * 660)
+        pygame.draw.rect(screen, ACCENT2, (120, 80, progress, 6), border_radius=3)
+
+        # Question card
+        question_rect = pygame.Rect(120, 110, 660, 135)
+        pygame.draw.rect(screen, CARD, question_rect, border_radius=18)
+        pygame.draw.rect(screen, BORDER, question_rect, 2, border_radius=18)
+        wrap_text(q["q"], question_font, TEXT, pygame.Rect(question_rect.x + 20, question_rect.y + 25, question_rect.width - 40, 90))
+
+        # Options
+        for i, option, rect in self.option_buttons():
+            fill = CARD
+            border = BORDER
+            text_color = TEXT
+
+            if self.answered:
+                if i == q["a"]:
+                    fill = (232, 247, 239)
+                    border = SUCCESS
+                    text_color = SUCCESS
+                elif i == self.selected_option and i != q["a"]:
+                    fill = (253, 240, 238)
+                    border = FAIL
+                    text_color = FAIL
+
+            pygame.draw.rect(screen, fill, rect, border_radius=12)
+            pygame.draw.rect(screen, border, rect, 2, border_radius=12)
+            wrap_text(option, body_font, text_color, pygame.Rect(rect.x + 14, rect.y + 16, rect.width - 28, rect.height - 20), line_spacing=2)
+
+        # Feedback
+        feedback_rect = pygame.Rect(120, 470, 660, 70)
+        pygame.draw.rect(screen, CARD, feedback_rect, border_radius=12)
+        border_line = SUCCESS if self.feedback_type == "correct" else FAIL if self.feedback_type == "wrong" else BORDER
+        pygame.draw.rect(screen, border_line, feedback_rect, 2, border_radius=12)
+        wrap_text(self.feedback, small_font, SUB if not self.feedback else TEXT, pygame.Rect(feedback_rect.x + 15, feedback_rect.y + 16, feedback_rect.width - 30, feedback_rect.height - 20), line_spacing=2)
+
+        if self.answered:
+            next_rect = pygame.Rect(WIDTH - 220, 560, 140, 46)
+            pygame.draw.rect(screen, TEXT, next_rect, border_radius=10)
+            draw_text("Next", body_font, WHITE, next_rect.centerx, next_rect.centery, center=True)
+
+    def draw_results(self):
+        total = len(self.questions)
+        pct = round((self.correct / total) * 100) if total else 0
+
+        if pct == 100:
+            title = "Perfect Score!"
+            msg = "Flawless! You're a true master of this topic."
+            color = (124, 58, 237)
+        elif pct >= 80:
+            title = "Great Work!"
+            msg = "Impressive! You really know your stuff."
+            color = SUCCESS
+        elif pct >= 60:
+            title = "Good Job!"
+            msg = "Solid performance! A bit more study and you'll ace it."
+            color = ACCENT2
+        elif pct >= 40:
+            title = "Getting There!"
+            msg = "You're improving! Review and try again."
+            color = (245, 158, 11)
+        else:
+            title = "Keep Practicing!"
+            msg = "Don't give up, every expert was once a beginner!"
+            color = FAIL
+
+        pygame.draw.circle(screen, color, (WIDTH // 2, 150), 68, 4)
+        draw_text(f"{pct}%", big_font, color, WIDTH // 2, 135, center=True)
+        draw_text("SCORE", tiny_font, SUB, WIDTH // 2, 175, center=True)
+
+        draw_text(title, title_font, TEXT, WIDTH // 2, 250, center=True)
+        draw_text(msg, body_font, SUB, WIDTH // 2, 295, center=True)
+
+        stats = [
+            (f"{self.correct}/{total}", "Correct"),
+            (f"{round(sum(self.timings) / len(self.timings))}s" if self.timings else "-", "Avg Time"),
+            (str(self.score), "Points"),
+        ]
+
+        start_x = 170
+        for i, (value, label) in enumerate(stats):
+            rect = pygame.Rect(start_x + i * 190, 350, 160, 90)
+            pygame.draw.rect(screen, CARD, rect, border_radius=12)
+            pygame.draw.rect(screen, BORDER, rect, 2, border_radius=12)
+            draw_text(value, heading_font, TEXT, rect.centerx, rect.y + 30, center=True)
+            draw_text(label, tiny_font, SUB, rect.centerx, rect.y + 62, center=True)
+
+        replay_rect = pygame.Rect(WIDTH // 2 - 170, 490, 160, 50)
+        home_rect = pygame.Rect(WIDTH // 2 + 10, 490, 190, 50)
+
+        pygame.draw.rect(screen, ACCENT, replay_rect, border_radius=12)
+        pygame.draw.rect(screen, BORDER, home_rect, 2, border_radius=12)
+
+        draw_text("Play Again", body_font, WHITE, replay_rect.centerx, replay_rect.centery, center=True)
+        draw_text("Change Category", body_font, TEXT, home_rect.centerx, home_rect.centery, center=True)
+
+    def handle_click(self, pos):
+        if self.state == "home":
+            for key, cat, rect in self.get_category_buttons():
+                if rect.collidepoint(pos):
+                    self.selected_cat = key
+
+            for label, rect in self.get_diff_buttons():
+                if rect.collidepoint(pos):
+                    self.difficulty = label
+
+            start_rect = pygame.Rect(WIDTH // 2 - 170, 485, 340, 54)
+            if start_rect.collidepoint(pos):
+                self.start_quiz()
+
+        elif self.state == "quiz":
+            if not self.answered:
+                for i, option, rect in self.option_buttons():
+                    if rect.collidepoint(pos):
+                        self.answer_question(i)
+                        break
+            else:
+                next_rect = pygame.Rect(WIDTH - 220, 560, 140, 46)
+                if next_rect.collidepoint(pos):
+                    self.next_question()
+
+        elif self.state == "results":
+            replay_rect = pygame.Rect(WIDTH // 2 - 170, 490, 160, 50)
+            home_rect = pygame.Rect(WIDTH // 2 + 10, 490, 190, 50)
+
+            if replay_rect.collidepoint(pos):
+                self.replay()
+            elif home_rect.collidepoint(pos):
+                self.go_home()
+
+    def update(self):
+        if self.state == "quiz" and not self.answered and self.remaining_time() <= 0:
+            self.handle_timeout()
+
+    def draw(self):
+        screen.fill(BG)
+
+        if self.state == "home":
+            self.draw_home()
+        elif self.state == "quiz":
+            self.draw_quiz()
+        elif self.state == "results":
+            self.draw_results()
+
+
+def main():
+    app = QuizApp()
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                app.handle_click(event.pos)
+
+        app.update()
+        app.draw()
+        pygame.display.flip()
+        clock.tick(60)
+
+
+if __name__ == "__main__":
+    main()

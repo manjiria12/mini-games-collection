@@ -1,0 +1,379 @@
+import random
+import sys
+import pygame
+
+pygame.init()
+
+WIDTH, HEIGHT = 700, 620
+GRID_SIZE = 20
+COLS, ROWS = 20, 20
+BOARD_SIZE = GRID_SIZE * COLS
+BOARD_X = (WIDTH - BOARD_SIZE) // 2
+BOARD_Y = 140
+
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Snake Game")
+clock = pygame.time.Clock()
+
+# Colors
+BG = (5, 10, 5)
+GRID = (13, 31, 13)
+SNAKE = (57, 255, 20)
+FOOD = (255, 0, 128)
+BONUS = (255, 255, 0)
+TEXT = (57, 255, 20)
+DIM = (26, 77, 26)
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+OVERLAY = (5, 10, 5, 220)
+
+title_font = pygame.font.SysFont("consolas", 36, bold=True)
+hud_font = pygame.font.SysFont("consolas", 24, bold=True)
+small_font = pygame.font.SysFont("consolas", 16, bold=True)
+button_font = pygame.font.SysFont("consolas", 22, bold=True)
+
+best_score = 0
+
+
+def cell(x, y):
+    return {"x": x, "y": y}
+
+
+def random_cell():
+    return cell(random.randrange(COLS), random.randrange(ROWS))
+
+
+class Button:
+    def __init__(self, rect, text):
+        self.rect = pygame.Rect(rect)
+        self.text = text
+
+    def draw(self, surface):
+        mouse = pygame.mouse.get_pos()
+        hovered = self.rect.collidepoint(mouse)
+        border = SNAKE
+        fill = SNAKE if hovered else BG
+        txt = BLACK if hovered else SNAKE
+
+        pygame.draw.rect(surface, fill, self.rect, border_radius=8)
+        pygame.draw.rect(surface, border, self.rect, 2, border_radius=8)
+
+        label = button_font.render(self.text, True, txt)
+        label_rect = label.get_rect(center=self.rect.center)
+        surface.blit(label, label_rect)
+
+    def clicked(self, event):
+        return event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.rect.collidepoint(event.pos)
+
+
+class SnakeGame:
+    def __init__(self):
+        self.start_button = Button((WIDTH // 2 - 110, HEIGHT // 2 + 40, 220, 50), "START GAME")
+        self.reset()
+
+    def reset(self):
+        self.snake = [cell(10, 10), cell(9, 10), cell(8, 10)]
+        self.direction = cell(1, 0)
+        self.next_direction = cell(1, 0)
+        self.food = None
+        self.bonus = None
+        self.score = 0
+        self.level = 1
+        self.running = False
+        self.game_over = False
+        self.frame = 0
+        self.particles = []
+        self.move_delay = 150
+        self.last_move_time = pygame.time.get_ticks()
+        self.spawn_food()
+
+    def spawn_food(self):
+        while True:
+            candidate = random_cell()
+            if not any(s["x"] == candidate["x"] and s["y"] == candidate["y"] for s in self.snake):
+                self.food = candidate
+                break
+
+        if self.score > 0 and self.score % 50 == 0 and self.bonus is None:
+            while True:
+                candidate = random_cell()
+                on_snake = any(s["x"] == candidate["x"] and s["y"] == candidate["y"] for s in self.snake)
+                on_food = candidate["x"] == self.food["x"] and candidate["y"] == self.food["y"]
+                if not on_snake and not on_food:
+                    self.bonus = candidate
+                    break
+
+    def burst(self, cx, cy, color, count):
+        for _ in range(count):
+            self.particles.append(
+                {
+                    "x": cx,
+                    "y": cy,
+                    "vx": random.uniform(-4, 4),
+                    "vy": random.uniform(-4, 4),
+                    "life": 1.0,
+                    "color": color,
+                }
+            )
+
+    def handle_key(self, key):
+        if not self.running:
+            return
+
+        move_map = {
+            pygame.K_UP: cell(0, -1),
+            pygame.K_DOWN: cell(0, 1),
+            pygame.K_LEFT: cell(-1, 0),
+            pygame.K_RIGHT: cell(1, 0),
+            pygame.K_w: cell(0, -1),
+            pygame.K_s: cell(0, 1),
+            pygame.K_a: cell(-1, 0),
+            pygame.K_d: cell(1, 0),
+        }
+
+        if key in move_map:
+            nd = move_map[key]
+            if not (nd["x"] == -self.direction["x"] and nd["y"] == -self.direction["y"]):
+                self.next_direction = nd
+
+    def update(self):
+        if not self.running:
+            self.update_particles()
+            return
+
+        now = pygame.time.get_ticks()
+        if now - self.last_move_time < self.move_delay:
+            self.update_particles()
+            return
+
+        self.last_move_time = now
+        self.frame += 1
+        self.direction = self.next_direction.copy()
+
+        head = cell(
+            self.snake[0]["x"] + self.direction["x"],
+            self.snake[0]["y"] + self.direction["y"],
+        )
+
+        hit_wall = head["x"] < 0 or head["x"] >= COLS or head["y"] < 0 or head["y"] >= ROWS
+        hit_self = any(s["x"] == head["x"] and s["y"] == head["y"] for s in self.snake)
+
+        if hit_wall or hit_self:
+            self.end_game()
+            return
+
+        self.snake.insert(0, head)
+        grew = False
+
+        if head["x"] == self.food["x"] and head["y"] == self.food["y"]:
+            points = 10 * self.level
+            self.score += points
+            grew = True
+            self.burst(
+                BOARD_X + self.food["x"] * GRID_SIZE + GRID_SIZE // 2,
+                BOARD_Y + self.food["y"] * GRID_SIZE + GRID_SIZE // 2,
+                FOOD,
+                8,
+            )
+            self.level = self.score // 100 + 1
+            self.move_delay = max(60, 150 - self.level * 12)
+            self.spawn_food()
+
+        if self.bonus and head["x"] == self.bonus["x"] and head["y"] == self.bonus["y"]:
+            self.score += 50 * self.level
+            grew = True
+            self.burst(
+                BOARD_X + head["x"] * GRID_SIZE + GRID_SIZE // 2,
+                BOARD_Y + head["y"] * GRID_SIZE + GRID_SIZE // 2,
+                BONUS,
+                12,
+            )
+            self.bonus = None
+
+        if not grew:
+            self.snake.pop()
+
+        global best_score
+        if self.score > best_score:
+            best_score = self.score
+
+        self.update_particles()
+
+    def update_particles(self):
+        alive = []
+        for p in self.particles:
+            p["x"] += p["vx"]
+            p["y"] += p["vy"]
+            p["life"] -= 0.06
+            if p["life"] > 0:
+                alive.append(p)
+        self.particles = alive
+
+    def end_game(self):
+        self.running = False
+        self.game_over = True
+        head = self.snake[0]
+        self.burst(
+            BOARD_X + head["x"] * GRID_SIZE + GRID_SIZE // 2,
+            BOARD_Y + head["y"] * GRID_SIZE + GRID_SIZE // 2,
+            FOOD,
+            20,
+        )
+        self.start_button.text = "PLAY AGAIN"
+
+    def speed_label(self):
+        labels = ["SLOW", "NORMAL", "FAST", "FASTER", "BLAZING", "INSANE", "LUDICROUS"]
+        return labels[min(self.level - 1, len(labels) - 1)]
+
+    def draw_background(self):
+        screen.fill(BG)
+
+        for x in range(0, WIDTH, 40):
+            pygame.draw.line(screen, (20, 40, 20), (x, 0), (x, HEIGHT))
+        for y in range(0, HEIGHT, 40):
+            pygame.draw.line(screen, (20, 40, 20), (0, y), (WIDTH, y))
+
+    def draw_text_center(self, text, font, color, y):
+        label = font.render(text, True, color)
+        rect = label.get_rect(center=(WIDTH // 2, y))
+        screen.blit(label, rect)
+
+    def draw_hud(self):
+        self.draw_text_center("SNAKE", title_font, SNAKE, 40)
+
+        items = [
+            ("SCORE", str(self.score)),
+            ("BEST", str(best_score)),
+            ("LEVEL", str(self.level)),
+            ("LENGTH", str(len(self.snake))),
+        ]
+
+        start_x = WIDTH // 2 - 240
+        for i, (label, value) in enumerate(items):
+            x = start_x + i * 160
+            value_surf = hud_font.render(value, True, WHITE)
+            value_rect = value_surf.get_rect(center=(x, 80))
+            screen.blit(value_surf, value_rect)
+
+            label_surf = small_font.render(label, True, DIM)
+            label_rect = label_surf.get_rect(center=(x, 105))
+            screen.blit(label_surf, label_rect)
+
+        speed = small_font.render(f"SPEED: {self.speed_label()}", True, DIM)
+        controls = small_font.render("ARROWS or WASD to move  •  Eat food  •  Avoid walls and yourself", True, DIM)
+        screen.blit(speed, speed.get_rect(center=(WIDTH // 2, 565)))
+        screen.blit(controls, controls.get_rect(center=(WIDTH // 2, 590)))
+
+    def draw_board(self):
+        pygame.draw.rect(screen, BG, (BOARD_X, BOARD_Y, BOARD_SIZE, BOARD_SIZE))
+        pygame.draw.rect(screen, SNAKE, (BOARD_X, BOARD_Y, BOARD_SIZE, BOARD_SIZE), 2)
+
+        for i in range(COLS + 1):
+            x = BOARD_X + i * GRID_SIZE
+            pygame.draw.line(screen, GRID, (x, BOARD_Y), (x, BOARD_Y + BOARD_SIZE))
+        for j in range(ROWS + 1):
+            y = BOARD_Y + j * GRID_SIZE
+            pygame.draw.line(screen, GRID, (BOARD_X, y), (BOARD_X + BOARD_SIZE, y))
+
+    def draw_particles(self):
+        for p in self.particles:
+            alpha_color = p["color"]
+            size = 4
+            rect = pygame.Rect(int(p["x"] - 2), int(p["y"] - 2), size, size)
+            pygame.draw.rect(screen, alpha_color, rect)
+
+    def draw_food(self):
+        fx = BOARD_X + self.food["x"] * GRID_SIZE + 2
+        fy = BOARD_Y + self.food["y"] * GRID_SIZE + 2
+        pygame.draw.rect(screen, FOOD, (fx, fy, GRID_SIZE - 4, GRID_SIZE - 4), border_radius=3)
+
+        if self.bonus:
+            bx = BOARD_X + self.bonus["x"] * GRID_SIZE
+            by = BOARD_Y + self.bonus["y"] * GRID_SIZE
+            points = [
+                (bx + GRID_SIZE // 2, by + 2),
+                (bx + GRID_SIZE - 2, by + GRID_SIZE - 2),
+                (bx + 2, by + GRID_SIZE - 2),
+            ]
+            pygame.draw.polygon(screen, BONUS, points)
+
+    def draw_snake(self):
+        for i, s in enumerate(self.snake):
+            x = BOARD_X + s["x"] * GRID_SIZE + 1
+            y = BOARD_Y + s["y"] * GRID_SIZE + 1
+
+            if i == 0:
+                color = WHITE
+            else:
+                ratio = 1 - i / max(1, len(self.snake))
+                green = max(60, int(255 * ratio))
+                color = (20, green, 20)
+
+            pygame.draw.rect(screen, color, (x, y, GRID_SIZE - 2, GRID_SIZE - 2), border_radius=3)
+
+            if i == 0:
+                if self.direction["x"] != 0:
+                    pygame.draw.rect(screen, BLACK, (x + GRID_SIZE // 2 - 2, y + 3, 3, 3))
+                    pygame.draw.rect(screen, BLACK, (x + GRID_SIZE // 2 - 2, y + GRID_SIZE - 6, 3, 3))
+                else:
+                    pygame.draw.rect(screen, BLACK, (x + 3, y + GRID_SIZE // 2 - 2, 3, 3))
+                    pygame.draw.rect(screen, BLACK, (x + GRID_SIZE - 6, y + GRID_SIZE // 2 - 2, 3, 3))
+
+    def draw_overlay(self):
+        if self.running:
+            return
+
+        overlay = pygame.Surface((BOARD_SIZE, BOARD_SIZE), pygame.SRCALPHA)
+        overlay.fill(OVERLAY)
+        screen.blit(overlay, (BOARD_X, BOARD_Y))
+
+        title = "GAME OVER" if self.game_over else "SNAKE"
+        message = f"SCORE: {self.score} | LEVEL: {self.level}" if self.game_over else "USE ARROW KEYS OR WASD"
+
+        self.draw_text_center(title, title_font, FOOD if self.game_over else SNAKE, BOARD_Y + 130)
+        self.draw_text_center(message, small_font, DIM, BOARD_Y + 180)
+        self.start_button.draw(screen)
+
+    def draw(self):
+        self.draw_background()
+        self.draw_hud()
+        self.draw_board()
+        self.draw_particles()
+        self.draw_food()
+        self.draw_snake()
+        self.draw_overlay()
+
+
+def main():
+    game = SnakeGame()
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
+                if event.key == pygame.K_r:
+                    game.reset()
+                    game.running = True
+                    game.start_button.text = "PLAY AGAIN"
+                game.handle_key(event.key)
+
+            if game.start_button.clicked(event) and not game.running:
+                game.reset()
+                game.running = True
+                game.start_button.text = "PLAY AGAIN"
+
+        game.update()
+        game.draw()
+
+        pygame.display.flip()
+        clock.tick(60)
+
+
+if __name__ == "__main__":
+    main()
