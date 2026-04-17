@@ -12,6 +12,7 @@
   body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;overflow-x:hidden}
   body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(108,99,255,.12),transparent);pointer-events:none;z-index:0}
 
+  /* HERO */
   .hero{max-width:900px;margin:0 auto;padding:5rem 2rem 3rem;text-align:center;position:relative;z-index:1}
   .badge{display:inline-block;padding:4px 14px;border:1px solid var(--border);border-radius:50px;font-family:'Space Mono',monospace;font-size:.7rem;color:var(--sub);margin-bottom:1.5rem;letter-spacing:.08em}
   h1{font-size:clamp(2.2rem,6vw,4rem);font-weight:800;line-height:1;letter-spacing:-.04em;margin-bottom:1rem}
@@ -21,16 +22,19 @@
   .pill{padding:5px 14px;border-radius:50px;background:var(--s2);border:1px solid var(--border);font-size:.75rem;color:var(--sub);font-family:'Space Mono',monospace}
   .pill strong{color:var(--a3);font-weight:700}
 
+  /* STATS */
   .stats-row{display:flex;gap:1.5rem;justify-content:center;margin-bottom:4rem;flex-wrap:wrap}
   .stat{text-align:center}
   .stat-val{font-size:2rem;font-weight:800;color:var(--text)}
   .stat-lbl{font-size:.7rem;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:.1em;text-transform:uppercase}
 
+  /* SECTION */
   .section{max-width:900px;margin:0 auto;padding:0 2rem 5rem;position:relative;z-index:1}
   .section-label{font-family:'Space Mono',monospace;font-size:.65rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.6rem}
   .section-title{font-size:1.6rem;font-weight:800;letter-spacing:-.02em;margin-bottom:.4rem}
   .section-sub{color:var(--sub);font-size:.9rem;margin-bottom:2rem}
 
+  /* GAMES GRID */
   .games-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.25rem}
   .game-card{background:var(--s1);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:all .25s;text-decoration:none;color:inherit;display:flex;flex-direction:column}
   .game-card:hover{transform:translateY(-4px);border-color:var(--accent);box-shadow:0 12px 40px rgba(108,99,255,.2)}
@@ -51,18 +55,24 @@
   .diff-dot.lit.med{background:var(--a4)}
   .diff-dot.lit.hard{background:var(--a2)}
 
+  /* SKILLS SECTION */
   .skills-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem;margin-bottom:3rem}
   .skill-item{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:1rem;display:flex;align-items:center;gap:.75rem}
   .skill-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
   .skill-name{font-size:.85rem;font-weight:700}
   .skill-sub{font-size:.7rem;color:var(--sub)}
 
+  /* FOOTER */
   footer{border-top:1px solid var(--border);text-align:center;padding:2rem;font-family:'Space Mono',monospace;font-size:.7rem;color:var(--sub);position:relative;z-index:1}
   footer strong{color:var(--text)}
+
+  /* Animated bg dots */
+  .bg-dot{position:fixed;border-radius:50%;pointer-events:none;z-index:0;opacity:.35}
 </style>
 </head>
 <body>
 
+<!-- Hero -->
 <div class="hero">
   <div class="badge">// portfolio project</div>
   <h1>Mini Games<br/><em>Collection</em></h1>
@@ -76,13 +86,14 @@
     <span class="pill"><strong>Game Loop</strong></span>
   </div>
   <div class="stats-row">
-    <div class="stat"><div class="stat-val">5</div><div class="stat-lbl">Games</div></div>
-    <div class="stat"><div class="stat-val">5</div><div class="stat-lbl">Files</div></div>
+    <div class="stat"><div class="stat-val">4</div><div class="stat-lbl">Games</div></div>
+    <div class="stat"><div class="stat-val">4</div><div class="stat-lbl">Files</div></div>
     <div class="stat"><div class="stat-val">0</div><div class="stat-lbl">Dependencies</div></div>
     <div class="stat"><div class="stat-val">∞</div><div class="stat-lbl">Fun</div></div>
   </div>
 </div>
 
+<!-- Games -->
 <div class="section">
   <div class="section-label">// the collection</div>
   <div class="section-title">All 5 Games</div>
@@ -90,8 +101,10 @@
 
   <div class="games-grid">
 
+    <!-- Snake -->
     <a class="game-card" href="snake-game.html">
       <div class="card-thumb" style="background:linear-gradient(135deg,#0a1a0a,#0d2b0d)">
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 9px,rgba(57,255,20,.05) 9px,rgba(57,255,20,.05) 10px)"></div>
         <div class="card-emoji">🐍</div>
       </div>
       <div class="card-body">
@@ -99,13 +112,28 @@
           <div class="card-name">Snake Game</div>
           <div class="card-num">01</div>
         </div>
-        <div class="card-desc">Classic snake with increasing speed, bonus food, particles, and level system.</div>
+        <div class="card-desc">Classic snake with increasing speed, bonus food, particles, and level system. Arrow keys or WASD.</div>
+        <div class="card-tags">
+          <span class="tag">canvas</span>
+          <span class="tag">game loop</span>
+          <span class="tag">collision</span>
+          <span class="tag">particles</span>
+        </div>
       </div>
       <div class="card-footer">
+        <div>
+          <div style="font-size:.65rem;color:var(--sub);margin-bottom:3px;font-family:'Space Mono',monospace">DIFFICULTY</div>
+          <div class="diff-dots">
+            <div class="diff-dot lit"></div>
+            <div class="diff-dot lit med"></div>
+            <div class="diff-dot lit hard"></div>
+          </div>
+        </div>
         <button class="play-btn" style="background:#39ff14;color:#000">Play ▶</button>
       </div>
     </a>
 
+    <!-- Quiz -->
     <a class="game-card" href="quiz-app.html">
       <div class="card-thumb" style="background:linear-gradient(135deg,#1a0a00,#2d1500)">
         <div class="card-emoji">🧠</div>
@@ -115,13 +143,28 @@
           <div class="card-name">Quiz Arena</div>
           <div class="card-num">02</div>
         </div>
-        <div class="card-desc">Questions across Science, History, Tech & Geography with timer and scoring.</div>
+        <div class="card-desc">40 questions across Science, History, Tech & Geography. 3 difficulty levels, timer, and scoring system.</div>
+        <div class="card-tags">
+          <span class="tag">data handling</span>
+          <span class="tag">timer</span>
+          <span class="tag">scoring</span>
+          <span class="tag">UI</span>
+        </div>
       </div>
       <div class="card-footer">
+        <div>
+          <div style="font-size:.65rem;color:var(--sub);margin-bottom:3px;font-family:'Space Mono',monospace">DIFFICULTY</div>
+          <div class="diff-dots">
+            <div class="diff-dot lit"></div>
+            <div class="diff-dot lit med"></div>
+            <div class="diff-dot"></div>
+          </div>
+        </div>
         <button class="play-btn" style="background:#e8472a;color:#fff">Play ▶</button>
       </div>
     </a>
 
+    <!-- Memory -->
     <a class="game-card" href="memory-game.html">
       <div class="card-thumb" style="background:linear-gradient(135deg,#100a1e,#1a0d38)">
         <div class="card-emoji">🃏</div>
@@ -131,13 +174,28 @@
           <div class="card-name">Memory Match</div>
           <div class="card-num">03</div>
         </div>
-        <div class="card-desc">Flip and match emoji pairs with timer and move counter.</div>
+        <div class="card-desc">Flip and match emoji pairs. 3 grid sizes (4×4 to 8×8), move counter, timer, and best-score tracking.</div>
+        <div class="card-tags">
+          <span class="tag">state mgmt</span>
+          <span class="tag">matching</span>
+          <span class="tag">animation</span>
+          <span class="tag">timer</span>
+        </div>
       </div>
       <div class="card-footer">
+        <div>
+          <div style="font-size:.65rem;color:var(--sub);margin-bottom:3px;font-family:'Space Mono',monospace">DIFFICULTY</div>
+          <div class="diff-dots">
+            <div class="diff-dot lit"></div>
+            <div class="diff-dot lit med"></div>
+            <div class="diff-dot lit hard"></div>
+          </div>
+        </div>
         <button class="play-btn" style="background:#7c3aed;color:#fff">Play ▶</button>
       </div>
     </a>
 
+    <!-- Tic Tac Toe -->
     <a class="game-card" href="tic-tac-toe.html">
       <div class="card-thumb" style="background:linear-gradient(135deg,#0f0f0f,#1a1a1a)">
         <div class="card-emoji">⭕</div>
@@ -147,9 +205,23 @@
           <div class="card-name">Tic Tac Toe</div>
           <div class="card-num">04</div>
         </div>
-        <div class="card-desc">Classic board game with unbeatable AI and 2-player mode.</div>
+        <div class="card-desc">Classic board game with unbeatable AI (Minimax algorithm). Three difficulty levels + 2-player mode.</div>
+        <div class="card-tags">
+          <span class="tag">minimax AI</span>
+          <span class="tag">win detect</span>
+          <span class="tag">2-player</span>
+          <span class="tag">alpha-beta</span>
+        </div>
       </div>
       <div class="card-footer">
+        <div>
+          <div style="font-size:.65rem;color:var(--sub);margin-bottom:3px;font-family:'Space Mono',monospace">DIFFICULTY</div>
+          <div class="diff-dots">
+            <div class="diff-dot lit"></div>
+            <div class="diff-dot lit med"></div>
+            <div class="diff-dot lit hard"></div>
+          </div>
+        </div>
         <button class="play-btn" style="background:#4dc3ff;color:#000">Play ▶</button>
       </div>
     </a>
@@ -157,34 +229,37 @@
   </div>
 </div>
 
+<!-- Skills -->
 <div class="section">
   <div class="section-label">// what this demonstrates</div>
   <div class="section-title">Skills Showcased</div>
+  <p class="section-sub">Every game targets specific programming concepts.</p>
   <div class="skills-grid">
-    <div class="skill-item"><div class="skill-icon">🔄</div><div><div class="skill-name">Game Loop</div><div class="skill-sub">Timing systems</div></div></div>
-    <div class="skill-item"><div class="skill-icon">🤖</div><div><div class="skill-name">AI Logic</div><div class="skill-sub">Minimax algorithm</div></div></div>
-    <div class="skill-item"><div class="skill-icon">💥</div><div><div class="skill-name">Collision Detection</div><div class="skill-sub">Snake movement</div></div></div>
-    <div class="skill-item"><div class="skill-icon">🧩</div><div><div class="skill-name">State Management</div><div class="skill-sub">Reset / win / lose states</div></div></div>
-    <div class="skill-item"><div class="skill-icon">⌨️</div><div><div class="skill-name">Event Handling</div><div class="skill-sub">Keyboard / click input</div></div></div>
-    <div class="skill-item"><div class="skill-icon">📊</div><div><div class="skill-name">Data Handling</div><div class="skill-sub">Quiz questions / scoring</div></div></div>
+    <div class="skill-item"><div class="skill-icon" style="background:rgba(57,255,20,.1)">🔄</div><div><div class="skill-name">Game Loop</div><div class="skill-sub">requestAnimationFrame, delta timing</div></div></div>
+    <div class="skill-item"><div class="skill-icon" style="background:rgba(108,99,255,.1)">🤖</div><div><div class="skill-name">AI (Minimax)</div><div class="skill-sub">Alpha-beta pruning, decision trees</div></div></div>
+    <div class="skill-item"><div class="skill-icon" style="background:rgba(67,233,123,.1)">🧩</div><div><div class="skill-name">State Management</div><div class="skill-sub">Game states, transitions, resets</div></div></div>
+    <div class="skill-item"><div class="skill-icon" style="background:rgba(41,182,246,.1)">🎨</div><div><div class="skill-name">Canvas 2D API</div><div class="skill-sub">Drawing, transforms, compositing</div></div></div>
+    <div class="skill-item"><div class="skill-icon" style="background:rgba(108,99,255,.1)">⌨️</div><div><div class="skill-name">Event Handling</div><div class="skill-sub">Keyboard, mouse, touch input</div></div></div>
+    <div class="skill-item"><div class="skill-icon" style="background:rgba(255,101,132,.1)">📊</div><div><div class="skill-name">Data Handling</div><div class="skill-sub">Dynamic rendering, filtering, scoring</div></div></div>
   </div>
 </div>
 
+<!-- File structure -->
 <div class="section">
   <div class="section-label">// project structure</div>
   <div class="section-title">File Structure</div>
   <div style="background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:1.5rem;font-family:'Space Mono',monospace;font-size:.8rem;line-height:2;color:var(--sub)">
     <div style="color:var(--text);font-weight:700;margin-bottom:.5rem">mini-games-collection/</div>
-    <div>├── index.html</div>
-    <div>├── snake-game.html</div>
-    <div>├── quiz-app.html</div>
-    <div>├── memory-game.html</div>
-    <div>└── tic-tac-toe.html</div>
+    <div>├── <span style="color:#6c63ff">index.html</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#444">← this page</span></div>
+    <div>├── <span style="color:#39ff14">snake-game.html</span> &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#444">← canvas game</span></div>
+    <div>├── <span style="color:#e8472a">quiz-app.html</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#444">← data-driven quiz</span></div>
+    <div>├── <span style="color:#7c3aed">memory-game.html</span> &nbsp;&nbsp;<span style="color:#444">← card matching</span></div>
+    <div>└── <span style="color:#4dc3ff">tic-tac-toe.html</span> &nbsp;&nbsp;<span style="color:#444">← AI minimax</span></div>
   </div>
 </div>
 
 <footer>
-  Built with <strong>HTML</strong> · <strong>CSS</strong> · <strong>JavaScript</strong>
+  Built with <strong>HTML</strong> · <strong>CSS</strong> · <strong>JavaScript</strong> &nbsp;|&nbsp; Zero dependencies &nbsp;|&nbsp; Open every file in a browser
 </footer>
 
 </body>
