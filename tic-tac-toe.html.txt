@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Tic Tac Toe</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root{--bg:#0f0f0f;--surface:#1a1a1a;--border:#2e2e2e;--x:#ff4d4d;--o:#4dc3ff;--win:#ffd700;--text:#f0f0f0;--sub:#666}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1rem}
+  h1{font-family:'Bebas Neue',sans-serif;font-size:3rem;letter-spacing:.1em;margin-bottom:.2rem}
+  h1 span:first-child{color:var(--x)}
+  h1 span:last-child{color:var(--o)}
+  .subtitle{color:var(--sub);font-size:.85rem;margin-bottom:1.5rem;letter-spacing:.05em}
+  /* Mode selector */
+  .mode-row{display:flex;gap:.5rem;margin-bottom:1rem}
+  .mode-btn{padding:7px 18px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--sub);font-family:'Barlow',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:.03em}
+  .mode-btn.active{background:var(--surface);color:var(--text);border-color:#555}
+  /* Scoreboard */
+  .scoreboard{display:flex;gap:1.5rem;margin-bottom:1.5rem;align-items:center}
+  .score-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.7rem 1.4rem;text-align:center;min-width:80px}
+  .score-box.active-player{border-color:#555;transform:scale(1.05)}
+  .score-name{font-size:.65rem;color:var(--sub);letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px}
+  .score-val{font-size:1.6rem;font-weight:700}
+  .score-val.x{color:var(--x)}.score-val.o{color:var(--o)}
+  .vs{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--sub)}
+  .draws-box{font-size:.7rem;color:var(--sub);text-align:center}
+  .draws-val{font-size:1rem;font-weight:700;color:var(--text)}
+  /* Board */
+  .board{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1rem;width:300px}
+  @media(max-width:380px){.board{width:260px}}
+  .cell{aspect-ratio:1;background:var(--surface);border-radius:12px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:3.5rem;cursor:pointer;transition:all .18s;user-select:none}
+  .cell:hover:not(.taken){background:#222;transform:scale(1.03)}
+  .cell:active:not(.taken){transform:scale(.97)}
+  .cell.taken{cursor:default}
+  .cell.x-cell{color:var(--x)}
+  .cell.o-cell{color:var(--o)}
+  .cell.win-cell{background:#252500;border-color:var(--win);color:var(--win);animation:glow .8s ease infinite alternate}
+  @keyframes glow{from{box-shadow:0 0 8px rgba(255,215,0,.3)}to{box-shadow:0 0 20px rgba(255,215,0,.7)}}
+  .cell-inner{animation:pop .25s cubic-bezier(.34,1.56,.64,1)}
+  @keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+  /* Status */
+  .status{font-size:.95rem;font-weight:600;min-height:28px;text-align:center;margin-bottom:1rem;letter-spacing:.02em}
+  .status.x-turn{color:var(--x)}.status.o-turn{color:var(--o)}.status.draw{color:var(--sub)}.status.win{color:var(--win)}
+  /* Buttons */
+  .btn-row{display:flex;gap:.75rem}
+  .btn{padding:9px 24px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);font-family:'Barlow',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .18s;letter-spacing:.05em;text-transform:uppercase}
+  .btn:hover{background:var(--surface);border-color:#555}
+  .btn-primary{border-color:#555;background:var(--surface)}
+  /* AI difficulty */
+  .ai-row{display:flex;gap:.4rem;margin-bottom:1rem;align-items:center;font-size:.75rem;color:var(--sub)}
+  .ai-diff{padding:4px 12px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--sub);font-family:'Barlow',sans-serif;font-size:.72rem;cursor:pointer;font-weight:600;text-transform:uppercase;transition:all .2s}
+  .ai-diff.active{background:#1e1e1e;color:var(--text);border-color:#555}
+</style>
+</head>
+<body>
+<h1><span>TIC</span>&nbsp;<span>TAC</span>&nbsp;TOE</h1>
+<p class="subtitle">Classic game · AI powered</p>
+
+<div class="mode-row">
+  <button class="mode-btn active" onclick="setMode('ai',this)">vs AI</button>
+  <button class="mode-btn" onclick="setMode('2p',this)">2 Players</button>
+</div>
+
+<div class="ai-row" id="ai-row">
+  AI Difficulty:
+  <button class="ai-diff active" data-d="easy" onclick="setAIDiff(this)">Easy</button>
+  <button class="ai-diff" data-d="medium" onclick="setAIDiff(this)">Medium</button>
+  <button class="ai-diff" data-d="hard" onclick="setAIDiff(this)">Unbeatable</button>
+</div>
+
+<div class="scoreboard">
+  <div class="score-box active-player" id="score-x">
+    <div class="score-name" id="name-x">YOU</div>
+    <div class="score-val x" id="val-x">0</div>
+  </div>
+  <div style="text-align:center">
+    <div class="vs">VS</div>
+    <div class="draws-box"><div class="draws-val" id="draws">0</div>Draws</div>
+  </div>
+  <div class="score-box" id="score-o">
+    <div class="score-name" id="name-o">AI</div>
+    <div class="score-val o" id="val-o">0</div>
+  </div>
+</div>
+
+<div class="board" id="board"></div>
+<div class="status x-turn" id="status">Your turn (X)</div>
+
+<div class="btn-row">
+  <button class="btn btn-primary" onclick="resetBoard()">New Round</button>
+  <button class="btn" onclick="resetAll()">Reset All</button>
+</div>
+
+<script>
+const WINS=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+let board=Array(9).fill(null),cur='X',mode='ai',aiDiff='easy',scores={X:0,O:0,D:0},gameOver=false,aiThinking=false;
+
+function setMode(m,btn){
+  mode=m;document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  document.getElementById('ai-row').style.display=m==='ai'?'flex':'none';
+  document.getElementById('name-o').textContent=m==='ai'?'AI':'P2';
+  resetAll();
+}
+function setAIDiff(btn){aiDiff=btn.dataset.d;document.querySelectorAll('.ai-diff').forEach(b=>b.classList.remove('active'));btn.classList.add('active');resetBoard();}
+
+function buildBoard(){
+  const b=document.getElementById('board');b.innerHTML='';
+  board.forEach((v,i)=>{
+    const cell=document.createElement('div');
+    cell.className='cell'+(v?' taken'+' '+(v==='X'?'x-cell':'o-cell'):'');
+    cell.dataset.i=i;
+    if(v)cell.innerHTML=`<span class="cell-inner">${v}</span>`;
+    cell.addEventListener('click',()=>play(i));
+    b.appendChild(cell);
+  });
+}
+function updateStatus(){
+  const el=document.getElementById('status');
+  if(gameOver)return;
+  if(mode==='ai'){el.className=cur==='X'?'status x-turn':'status o-turn';el.textContent=cur==='X'?'Your turn (X)':'AI is thinking...';}
+  else{el.className=cur==='X'?'status x-turn':'status o-turn';el.textContent=cur==='X'?'Player X\'s turn':'Player O\'s turn';}
+}
+function updateScoreUI(){
+  document.getElementById('val-x').textContent=scores.X;
+  document.getElementById('val-o').textContent=scores.O;
+  document.getElementById('draws').textContent=scores.D;
+  document.getElementById('score-x').className='score-box'+(cur==='X'&&!gameOver?' active-player':'');
+  document.getElementById('score-o').className='score-box'+(cur==='O'&&!gameOver?' active-player':'');
+}
+
+function play(i){
+  if(board[i]||gameOver||aiThinking)return;
+  if(mode==='ai'&&cur==='O')return;
+  board[i]=cur;buildBoard();
+  const win=checkWin();
+  if(win){endGame(win);return;}
+  if(board.every(v=>v)){endGame(null);return;}
+  cur=cur==='X'?'O':'X';updateStatus();updateScoreUI();
+  if(mode==='ai'&&cur==='O'&&!gameOver){
+    aiThinking=true;setTimeout(aiMove,400);
+  }
+}
+
+function aiMove(){
+  aiThinking=false;
+  const move=getAIMove();
+  board[move]='O';buildBoard();
+  const win=checkWin();
+  if(win){endGame(win);return;}
+  if(board.every(v=>v)){endGame(null);return;}
+  cur='X';updateStatus();updateScoreUI();
+}
+
+function getAIMove(){
+  if(aiDiff==='easy'){
+    const empty=board.map((v,i)=>v?null:i).filter(v=>v!==null);
+    return empty[Math.floor(Math.random()*empty.length)];
+  }
+  if(aiDiff==='medium'&&Math.random()<0.3){
+    const empty=board.map((v,i)=>v?null:i).filter(v=>v!==null);
+    return empty[Math.floor(Math.random()*empty.length)];
+  }
+  return minimax(board,'O').idx;
+}
+
+function minimax(b,player,depth=0,alpha=-Infinity,beta=Infinity){
+  const win=checkWinOn(b);
+  if(win==='O')return{score:10-depth};
+  if(win==='X')return{score:depth-10};
+  const empty=b.map((v,i)=>v?null:i).filter(v=>v!==null);
+  if(!empty.length)return{score:0};
+  let best=player==='O'?{score:-Infinity,idx:-1}:{score:Infinity,idx:-1};
+  for(const i of empty){
+    const nb=[...b];nb[i]=player;
+    const s=minimax(nb,player==='O'?'X':'O',depth+1,alpha,beta);
+    s.idx=i;
+    if(player==='O'){if(s.score>best.score)best=s;alpha=Math.max(alpha,s.score);}
+    else{if(s.score<best.score)best=s;beta=Math.min(beta,s.score);}
+    if(beta<=alpha)break;
+  }
+  return best;
+}
+
+function checkWinOn(b){
+  for(const [a,c,e] of WINS){if(b[a]&&b[a]===b[c]&&b[a]===b[e])return b[a];}
+  return null;
+}
+function checkWin(){
+  for(const combo of WINS){
+    const [a,c,e]=combo;
+    if(board[a]&&board[a]===board[c]&&board[a]===board[e])return combo;
+  }
+  return null;
+}
+
+function endGame(winCombo){
+  gameOver=true;
+  const el=document.getElementById('status');
+  if(winCombo){
+    const winner=board[winCombo[0]];
+    scores[winner]++;
+    winCombo.forEach(i=>{
+      const cells=document.querySelectorAll('.cell');
+      cells[i].classList.add('win-cell');
+      cells[i].innerHTML=`<span class="cell-inner">${winner}</span>`;
+    });
+    const whoWon=mode==='ai'?(winner==='X'?'You win! 🎉':'AI wins! 🤖'):`Player ${winner} wins! 🎉`;
+    el.textContent=whoWon;el.className='status win';
+  } else {
+    scores.D++;el.textContent='Draw! 🤝';el.className='status draw';
+  }
+  updateScoreUI();
+  setTimeout(()=>{if(gameOver)resetBoard();},2500);
+}
+
+function resetBoard(){
+  board=Array(9).fill(null);gameOver=false;aiThinking=false;
+  cur='X';buildBoard();updateStatus();updateScoreUI();
+}
+function resetAll(){scores={X:0,O:0,D:0};resetBoard();}
+resetBoard();
+</script>
+</body>
+</html>

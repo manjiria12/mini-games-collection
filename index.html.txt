@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mini Games Collection</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+  :root{--bg:#07070e;--s1:#10101c;--s2:#18182a;--border:#23233a;--accent:#6c63ff;--a2:#ff6584;--a3:#43e97b;--a4:#f9a825;--a5:#29b6f6;--text:#f0f0f8;--sub:#8888aa}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;overflow-x:hidden}
+  body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(108,99,255,.12),transparent);pointer-events:none;z-index:0}
+
+  .hero{max-width:900px;margin:0 auto;padding:5rem 2rem 3rem;text-align:center;position:relative;z-index:1}
+  .badge{display:inline-block;padding:4px 14px;border:1px solid var(--border);border-radius:50px;font-family:'Space Mono',monospace;font-size:.7rem;color:var(--sub);margin-bottom:1.5rem;letter-spacing:.08em}
+  h1{font-size:clamp(2.2rem,6vw,4rem);font-weight:800;line-height:1;letter-spacing:-.04em;margin-bottom:1rem}
+  h1 em{font-style:normal;background:linear-gradient(135deg,var(--accent),var(--a2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .hero-sub{color:var(--sub);font-size:1rem;max-width:500px;margin:0 auto 2.5rem;line-height:1.7}
+  .hero-pills{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;margin-bottom:3rem}
+  .pill{padding:5px 14px;border-radius:50px;background:var(--s2);border:1px solid var(--border);font-size:.75rem;color:var(--sub);font-family:'Space Mono',monospace}
+  .pill strong{color:var(--a3);font-weight:700}
+
+  .stats-row{display:flex;gap:1.5rem;justify-content:center;margin-bottom:4rem;flex-wrap:wrap}
+  .stat{text-align:center}
+  .stat-val{font-size:2rem;font-weight:800;color:var(--text)}
+  .stat-lbl{font-size:.7rem;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:.1em;text-transform:uppercase}
+
+  .section{max-width:900px;margin:0 auto;padding:0 2rem 5rem;position:relative;z-index:1}
+  .section-label{font-family:'Space Mono',monospace;font-size:.65rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.6rem}
+  .section-title{font-size:1.6rem;font-weight:800;letter-spacing:-.02em;margin-bottom:.4rem}
+  .section-sub{color:var(--sub);font-size:.9rem;margin-bottom:2rem}
+
+  .games-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.25rem}
+  .game-card{background:var(--s1);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:all .25s;text-decoration:none;color:inherit;display:flex;flex-direction:column}
+  .game-card:hover{transform:translateY(-4px);border-color:var(--accent);box-shadow:0 12px 40px rgba(108,99,255,.2)}
+  .card-thumb{height:140px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+  .card-emoji{font-size:3.5rem;z-index:1}
+  .card-body{padding:1.25rem}
+  .card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
+  .card-name{font-size:1rem;font-weight:700}
+  .card-num{font-family:'Space Mono',monospace;font-size:.65rem;color:var(--sub)}
+  .card-desc{font-size:.82rem;color:var(--sub);line-height:1.6;margin-bottom:.9rem}
+  .card-tags{display:flex;gap:.4rem;flex-wrap:wrap}
+  .tag{padding:3px 9px;border-radius:50px;background:var(--s2);border:1px solid var(--border);font-size:.68rem;color:var(--sub);font-family:'Space Mono',monospace}
+  .card-footer{padding:.9rem 1.25rem;border-top:1px solid var(--border);margin-top:auto;display:flex;align-items:center;justify-content:space-between}
+  .play-btn{padding:7px 18px;border-radius:8px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;border:none;transition:all .2s;letter-spacing:.02em}
+  .diff-dots{display:flex;gap:3px;align-items:center}
+  .diff-dot{width:7px;height:7px;border-radius:50%;background:var(--border)}
+  .diff-dot.lit{background:var(--a3)}
+  .diff-dot.lit.med{background:var(--a4)}
+  .diff-dot.lit.hard{background:var(--a2)}
+
+  .skills-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem;margin-bottom:3rem}
+  .skill-item{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:1rem;display:flex;align-items:center;gap:.75rem}
+  .skill-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+  .skill-name{font-size:.85rem;font-weight:700}
+  .skill-sub{font-size:.7rem;color:var(--sub)}
+
+  footer{border-top:1px solid var(--border);text-align:center;padding:2rem;font-family:'Space Mono',monospace;font-size:.7rem;color:var(--sub);position:relative;z-index:1}
+  footer strong{color:var(--text)}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="badge">// portfolio project</div>
+  <h1>Mini Games<br/><em>Collection</em></h1>
+  <p class="hero-sub">5 fully playable browser games built with pure HTML, CSS & JavaScript. No frameworks. No dependencies. Just code.</p>
+  <div class="hero-pills">
+    <span class="pill"><strong>HTML5</strong></span>
+    <span class="pill"><strong>CSS3</strong></span>
+    <span class="pill"><strong>Vanilla JS</strong></span>
+    <span class="pill"><strong>Canvas API</strong></span>
+    <span class="pill"><strong>Minimax AI</strong></span>
+    <span class="pill"><strong>Game Loop</strong></span>
+  </div>
+  <div class="stats-row">
+    <div class="stat"><div class="stat-val">5</div><div class="stat-lbl">Games</div></div>
+    <div class="stat"><div class="stat-val">5</div><div class="stat-lbl">Files</div></div>
+    <div class="stat"><div class="stat-val">0</div><div class="stat-lbl">Dependencies</div></div>
+    <div class="stat"><div class="stat-val">∞</div><div class="stat-lbl">Fun</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">// the collection</div>
+  <div class="section-title">All 5 Games</div>
+  <p class="section-sub">Click any card to play instantly in your browser.</p>
+
+  <div class="games-grid">
+
+    <a class="game-card" href="snake-game.html">
+      <div class="card-thumb" style="background:linear-gradient(135deg,#0a1a0a,#0d2b0d)">
+        <div class="card-emoji">🐍</div>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-name">Snake Game</div>
+          <div class="card-num">01</div>
+        </div>
+        <div class="card-desc">Classic snake with increasing speed, bonus food, particles, and level system.</div>
+      </div>
+      <div class="card-footer">
+        <button class="play-btn" style="background:#39ff14;color:#000">Play ▶</button>
+      </div>
+    </a>
+
+    <a class="game-card" href="quiz-app.html">
+      <div class="card-thumb" style="background:linear-gradient(135deg,#1a0a00,#2d1500)">
+        <div class="card-emoji">🧠</div>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-name">Quiz Arena</div>
+          <div class="card-num">02</div>
+        </div>
+        <div class="card-desc">Questions across Science, History, Tech & Geography with timer and scoring.</div>
+      </div>
+      <div class="card-footer">
+        <button class="play-btn" style="background:#e8472a;color:#fff">Play ▶</button>
+      </div>
+    </a>
+
+    <a class="game-card" href="memory-game.html">
+      <div class="card-thumb" style="background:linear-gradient(135deg,#100a1e,#1a0d38)">
+        <div class="card-emoji">🃏</div>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-name">Memory Match</div>
+          <div class="card-num">03</div>
+        </div>
+        <div class="card-desc">Flip and match emoji pairs with timer and move counter.</div>
+      </div>
+      <div class="card-footer">
+        <button class="play-btn" style="background:#7c3aed;color:#fff">Play ▶</button>
+      </div>
+    </a>
+
+    <a class="game-card" href="tic-tac-toe.html">
+      <div class="card-thumb" style="background:linear-gradient(135deg,#0f0f0f,#1a1a1a)">
+        <div class="card-emoji">⭕</div>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-name">Tic Tac Toe</div>
+          <div class="card-num">04</div>
+        </div>
+        <div class="card-desc">Classic board game with unbeatable AI and 2-player mode.</div>
+      </div>
+      <div class="card-footer">
+        <button class="play-btn" style="background:#4dc3ff;color:#000">Play ▶</button>
+      </div>
+    </a>
+
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">// what this demonstrates</div>
+  <div class="section-title">Skills Showcased</div>
+  <div class="skills-grid">
+    <div class="skill-item"><div class="skill-icon">🔄</div><div><div class="skill-name">Game Loop</div><div class="skill-sub">Timing systems</div></div></div>
+    <div class="skill-item"><div class="skill-icon">🤖</div><div><div class="skill-name">AI Logic</div><div class="skill-sub">Minimax algorithm</div></div></div>
+    <div class="skill-item"><div class="skill-icon">💥</div><div><div class="skill-name">Collision Detection</div><div class="skill-sub">Snake movement</div></div></div>
+    <div class="skill-item"><div class="skill-icon">🧩</div><div><div class="skill-name">State Management</div><div class="skill-sub">Reset / win / lose states</div></div></div>
+    <div class="skill-item"><div class="skill-icon">⌨️</div><div><div class="skill-name">Event Handling</div><div class="skill-sub">Keyboard / click input</div></div></div>
+    <div class="skill-item"><div class="skill-icon">📊</div><div><div class="skill-name">Data Handling</div><div class="skill-sub">Quiz questions / scoring</div></div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">// project structure</div>
+  <div class="section-title">File Structure</div>
+  <div style="background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:1.5rem;font-family:'Space Mono',monospace;font-size:.8rem;line-height:2;color:var(--sub)">
+    <div style="color:var(--text);font-weight:700;margin-bottom:.5rem">mini-games-collection/</div>
+    <div>├── index.html</div>
+    <div>├── snake-game.html</div>
+    <div>├── quiz-app.html</div>
+    <div>├── memory-game.html</div>
+    <div>└── tic-tac-toe.html</div>
+  </div>
+</div>
+
+<footer>
+  Built with <strong>HTML</strong> · <strong>CSS</strong> · <strong>JavaScript</strong>
+</footer>
+
+</body>
+</html>

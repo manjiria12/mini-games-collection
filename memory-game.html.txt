@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Memory Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+  :root{--bg:#f0e6ff;--card-back:#7c3aed;--card-face:#fff;--match:#10b981;--fail:#ef4444;--text:#1e1b4b;--sub:#6d28d9}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);font-family:'Nunito',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:1.5rem 1rem;overflow-x:hidden}
+  body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(124,58,237,.15),transparent);pointer-events:none}
+  h1{font-size:2rem;font-weight:900;color:var(--text);letter-spacing:-.03em;margin-bottom:.2rem}
+  .tagline{font-size:.85rem;color:var(--sub);margin-bottom:1.25rem}
+  /* HUD */
+  .hud{display:flex;gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap;justify-content:center}
+  .hud-box{background:#fff;border-radius:14px;padding:.6rem 1.2rem;text-align:center;box-shadow:0 2px 12px rgba(124,58,237,.1)}
+  .hud-val{font-size:1.2rem;font-weight:800;color:var(--text)}
+  .hud-lbl{font-size:.65rem;color:var(--sub);letter-spacing:.08em;text-transform:uppercase}
+  /* Difficulty */
+  .diff-row{display:flex;gap:.5rem;margin-bottom:1.25rem}
+  .d-btn{padding:6px 16px;border-radius:50px;border:2px solid transparent;background:#fff;font-family:'Nunito',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .2s;color:var(--text)}
+  .d-btn:hover{border-color:var(--card-back)}
+  .d-btn.active{background:var(--card-back);color:#fff;border-color:var(--card-back)}
+  /* Grid */
+  .grid{display:grid;gap:10px;justify-content:center;margin-bottom:1.25rem}
+  .grid-4{grid-template-columns:repeat(4,80px)}
+  .grid-6{grid-template-columns:repeat(6,72px)}
+  .grid-8{grid-template-columns:repeat(8,66px)}
+  @media(max-width:480px){.grid-4{grid-template-columns:repeat(4,70px)}.grid-6{grid-template-columns:repeat(4,70px)}.grid-8{grid-template-columns:repeat(4,70px)}}
+  /* Card */
+  .card{width:100%;aspect-ratio:1;perspective:600px;cursor:pointer}
+  .card-inner{width:100%;height:100%;transition:transform .4s cubic-bezier(.4,0,.2,1);transform-style:preserve-3d;position:relative}
+  .card.flipped .card-inner,.card.matched .card-inner{transform:rotateY(180deg)}
+  .card-back,.card-front{position:absolute;inset:0;border-radius:12px;display:flex;align-items:center;justify-content:center;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+  .card-back{background:var(--card-back);background-image:radial-gradient(circle at 30% 30%,rgba(255,255,255,.2),transparent);box-shadow:0 4px 12px rgba(124,58,237,.25)}
+  .card-back::after{content:'?';font-size:1.4rem;font-weight:900;color:rgba(255,255,255,.5)}
+  .card-front{background:#fff;transform:rotateY(180deg);box-shadow:0 4px 12px rgba(0,0,0,.08);font-size:2rem}
+  .card.matched .card-front{background:#d1fae5;box-shadow:0 4px 16px rgba(16,185,129,.25)}
+  .card.wrong .card-inner{animation:shake .35s ease}
+  @keyframes shake{0%,100%{transform:rotateY(180deg) translateX(0)}25%{transform:rotateY(180deg) translateX(-6px)}75%{transform:rotateY(180deg) translateX(6px)}}
+  /* Buttons */
+  .btn-row{display:flex;gap:.75rem}
+  .btn{padding:10px 28px;border-radius:12px;border:none;font-family:'Nunito',sans-serif;font-size:.9rem;font-weight:800;cursor:pointer;transition:all .2s}
+  .btn-primary{background:var(--card-back);color:#fff;box-shadow:0 4px 16px rgba(124,58,237,.3)}
+  .btn-primary:hover{background:#6d28d9;transform:translateY(-2px);box-shadow:0 6px 20px rgba(124,58,237,.4)}
+  .btn-secondary{background:#fff;color:var(--text)}
+  .btn-secondary:hover{background:#f3f0ff;transform:translateY(-1px)}
+  /* Win overlay */
+  .win-overlay{position:fixed;inset:0;background:rgba(240,230,255,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;animation:fadeIn .4s ease}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .win-emoji{font-size:4rem;margin-bottom:.5rem;animation:bounce 1s ease infinite alternate}
+  @keyframes bounce{to{transform:translateY(-10px)}}
+  .win-title{font-size:2rem;font-weight:900;color:var(--text);margin-bottom:.5rem}
+  .win-sub{color:var(--sub);margin-bottom:1.5rem;font-size:.95rem}
+  .win-stats{display:flex;gap:1rem;margin-bottom:2rem;flex-wrap:wrap;justify-content:center}
+  .win-stat{background:#fff;border-radius:14px;padding:.8rem 1.5rem;text-align:center;box-shadow:0 2px 12px rgba(124,58,237,.1)}
+  .win-stat-val{font-size:1.5rem;font-weight:900;color:var(--card-back)}
+  .win-stat-lbl{font-size:.65rem;color:var(--sub);text-transform:uppercase;letter-spacing:.08em}
+</style>
+</head>
+<body>
+<h1>🃏 Memory Match</h1>
+<p class="tagline">Find all the matching pairs!</p>
+
+<div class="hud">
+  <div class="hud-box"><div class="hud-val" id="moves">0</div><div class="hud-lbl">Moves</div></div>
+  <div class="hud-box"><div class="hud-val" id="matched">0</div><div class="hud-lbl">Matched</div></div>
+  <div class="hud-box"><div class="hud-val" id="timer">0:00</div><div class="hud-lbl">Time</div></div>
+  <div class="hud-box"><div class="hud-val" id="best-moves">—</div><div class="hud-lbl">Best</div></div>
+</div>
+
+<div class="diff-row">
+  <button class="d-btn active" data-pairs="8" data-cols="4" onclick="setDiff(this)">Easy (4×4)</button>
+  <button class="d-btn" data-pairs="18" data-cols="6" onclick="setDiff(this)">Medium (6×6)</button>
+  <button class="d-btn" data-pairs="32" data-cols="8" onclick="setDiff(this)">Hard (8×8)</button>
+</div>
+
+<div class="grid grid-4" id="grid"></div>
+
+<div class="btn-row">
+  <button class="btn btn-primary" onclick="newGame()">New Game</button>
+  <button class="btn btn-secondary" onclick="revealAll()">Peek 👀</button>
+</div>
+
+<script>
+const EMOJIS=['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🦟','🦗','🕷','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🦧','🦣'];
+
+let pairs=8,cols=4,cards=[],flipped=[],matched=0,moves=0,lock=false,timerInt,seconds=0,started=false,best={8:null,18:null,32:null},peeking=false;
+
+function setDiff(btn){
+  document.querySelectorAll('.d-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  pairs=parseInt(btn.dataset.pairs);cols=parseInt(btn.dataset.cols);
+  newGame();
+}
+
+function newGame(){
+  clearInterval(timerInt);seconds=0;moves=0;matched=0;started=false;flipped=[];lock=false;
+  updateHUD();
+  const emojis=EMOJIS.slice().sort(()=>Math.random()-.5).slice(0,pairs);
+  cards=[...emojis,...emojis].sort(()=>Math.random()-.5);
+  const grid=document.getElementById('grid');
+  grid.className=`grid grid-${cols}`;
+  grid.innerHTML='';
+  cards.forEach((emoji,i)=>{
+    const card=document.createElement('div');
+    card.className='card';
+    card.dataset.idx=i;
+    card.dataset.emoji=emoji;
+    card.innerHTML=`<div class="card-inner"><div class="card-back"></div><div class="card-front">${emoji}</div></div>`;
+    card.addEventListener('click',()=>flipCard(card));
+    grid.appendChild(card);
+  });
+  document.getElementById('best-moves').textContent=best[pairs]||'—';
+}
+
+function flipCard(card){
+  if(lock||card.classList.contains('flipped')||card.classList.contains('matched'))return;
+  if(!started){started=true;timerInt=setInterval(()=>{seconds++;updateTimer();},1000);}
+  card.classList.add('flipped');
+  flipped.push(card);
+  if(flipped.length===2){
+    moves++;
+    document.getElementById('moves').textContent=moves;
+    lock=true;
+    const [a,b]=flipped;
+    if(a.dataset.emoji===b.dataset.emoji){
+      setTimeout(()=>{a.classList.add('matched');b.classList.add('matched');matched++;document.getElementById('matched').textContent=matched;flipped=[];lock=false;if(matched===pairs)win();},400);
+    } else {
+      a.classList.add('wrong');b.classList.add('wrong');
+      setTimeout(()=>{a.classList.remove('flipped','wrong');b.classList.remove('flipped','wrong');flipped=[];lock=false;},900);
+    }
+  }
+}
+
+function win(){
+  clearInterval(timerInt);
+  if(!best[pairs]||moves<best[pairs])best[pairs]=moves;
+  const div=document.createElement('div');
+  div.className='win-overlay';
+  const mins=Math.floor(seconds/60),secs=seconds%60;
+  div.innerHTML=`
+    <div class="win-emoji">🎉</div>
+    <div class="win-title">You Won!</div>
+    <div class="win-sub">All ${pairs} pairs matched!</div>
+    <div class="win-stats">
+      <div class="win-stat"><div class="win-stat-val">${moves}</div><div class="win-stat-lbl">Moves</div></div>
+      <div class="win-stat"><div class="win-stat-val">${mins}:${String(secs).padStart(2,'0')}</div><div class="win-stat-lbl">Time</div></div>
+      <div class="win-stat"><div class="win-stat-val">${best[pairs]}</div><div class="win-stat-lbl">Best</div></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="this.closest('.win-overlay').remove();newGame()">Play Again</button>
+    </div>`;
+  document.body.appendChild(div);
+}
+
+function revealAll(){
+  if(peeking)return;peeking=true;
+  const unmatched=document.querySelectorAll('.card:not(.matched):not(.flipped)');
+  unmatched.forEach(c=>c.classList.add('flipped'));
+  setTimeout(()=>{unmatched.forEach(c=>c.classList.remove('flipped'));peeking=false;},1200);
+}
+
+function updateHUD(){
+  document.getElementById('moves').textContent=moves;
+  document.getElementById('matched').textContent=matched;
+  updateTimer();
+}
+function updateTimer(){
+  const m=Math.floor(seconds/60),s=seconds%60;
+  document.getElementById('timer').textContent=`${m}:${String(s).padStart(2,'0')}`;
+}
+newGame();
+</script>
+</body>
+</html>

@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Quiz App</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root{--bg:#faf8f3;--card:#fff;--accent:#e8472a;--accent2:#2a5ce8;--text:#1a1208;--sub:#6b6048;--border:#e8e0d0;--success:#1a9e5c;--fail:#e8472a}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+  body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 20% 20%,rgba(232,71,42,.06) 0%,transparent 50%),radial-gradient(ellipse at 80% 80%,rgba(42,92,232,.06) 0%,transparent 50%);pointer-events:none}
+  .app{width:100%;max-width:620px;position:relative}
+  /* Home */
+  #home{text-align:center;animation:rise .5s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  .home-icon{font-size:3.5rem;margin-bottom:1rem}
+  h1{font-family:'DM Serif Display',serif;font-size:2.8rem;line-height:1;margin-bottom:.5rem;color:var(--text)}
+  .home-sub{color:var(--sub);font-size:1rem;margin-bottom:2rem}
+  .cat-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:2rem}
+  .cat-card{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:1.2rem 1rem;cursor:pointer;transition:all .2s;text-align:left}
+  .cat-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 24px rgba(232,71,42,.12)}
+  .cat-card.selected{border-color:var(--accent);background:rgba(232,71,42,.05)}
+  .cat-icon{font-size:1.6rem;margin-bottom:.4rem}
+  .cat-name{font-weight:600;font-size:.9rem}
+  .cat-count{font-size:.75rem;color:var(--sub)}
+  .diff-row{display:flex;gap:.5rem;justify-content:center;margin-bottom:1.5rem}
+  .diff-btn{padding:6px 18px;border-radius:50px;border:1.5px solid var(--border);background:transparent;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.8rem;font-weight:500;transition:all .2s}
+  .diff-btn.active{background:var(--text);color:#fff;border-color:var(--text)}
+  .start-btn{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:14px 40px;font-size:1rem;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;width:100%;transition:all .2s}
+  .start-btn:hover{background:#c93820;transform:translateY(-1px);box-shadow:0 6px 20px rgba(232,71,42,.3)}
+  /* Quiz */
+  #quiz{display:none;animation:rise .4s ease}
+  .quiz-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem}
+  .q-counter{font-size:.75rem;color:var(--sub);font-weight:500;letter-spacing:.05em}
+  .timer-wrap{display:flex;align-items:center;gap:6px}
+  .timer{font-size:1rem;font-weight:700;min-width:28px;text-align:right;transition:color .3s}
+  .timer.warn{color:var(--fail);animation:pulse .5s infinite alternate}
+  @keyframes pulse{to{transform:scale(1.1)}}
+  .progress-bar{height:4px;background:var(--border);border-radius:2px;margin-bottom:1.5rem;overflow:hidden}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .4s ease}
+  .question-card{background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:1.75rem;margin-bottom:1rem;min-height:120px;display:flex;align-items:center}
+  .q-text{font-family:'DM Serif Display',serif;font-size:1.3rem;line-height:1.4}
+  .options{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1rem}
+  .opt{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:1rem;cursor:pointer;font-size:.9rem;font-weight:500;transition:all .2s;text-align:left;font-family:'DM Sans',sans-serif}
+  .opt:hover:not(:disabled){border-color:var(--accent2);background:rgba(42,92,232,.04);transform:translateY(-1px)}
+  .opt.correct{background:#e8f7ef;border-color:var(--success);color:var(--success)}
+  .opt.wrong{background:#fdf0ee;border-color:var(--fail);color:var(--fail)}
+  .opt:disabled{cursor:default}
+  .feedback{background:var(--card);border-radius:12px;padding:1rem 1.25rem;font-size:.85rem;line-height:1.5;border-left:4px solid var(--border);color:var(--sub);min-height:52px;transition:border-color .3s}
+  .feedback.show-correct{border-color:var(--success)}
+  .feedback.show-wrong{border-color:var(--fail)}
+  .next-btn{background:var(--text);color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:.9rem;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;float:right;margin-top:.75rem;transition:all .2s;display:none}
+  .next-btn:hover{background:#333;transform:translateY(-1px)}
+  /* Results */
+  #results{display:none;text-align:center;animation:rise .5s ease}
+  .result-circle{width:130px;height:130px;border-radius:50%;margin:0 auto 1.5rem;display:flex;flex-direction:column;align-items:center;justify-content:center;border:4px solid;position:relative}
+  .result-pct{font-size:2rem;font-weight:700}
+  .result-lbl{font-size:.65rem;color:var(--sub)}
+  .result-title{font-family:'DM Serif Display',serif;font-size:2rem;margin-bottom:.5rem}
+  .result-msg{color:var(--sub);margin-bottom:1.5rem}
+  .result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.5rem}
+  .r-stat{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:1rem}
+  .r-stat-val{font-size:1.4rem;font-weight:700}
+  .r-stat-lbl{font-size:.7rem;color:var(--sub);margin-top:2px}
+  .replay-btn{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:12px 32px;font-size:.95rem;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-right:.5rem;transition:all .2s}
+  .replay-btn:hover{background:#c93820}
+  .home-btn-sm{background:transparent;color:var(--text);border:1.5px solid var(--border);border-radius:12px;padding:12px 24px;font-size:.95rem;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .2s}
+  .home-btn-sm:hover{border-color:var(--text)}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- HOME -->
+<div id="home">
+  <div class="home-icon">🧠</div>
+  <h1>Quiz Arena</h1>
+  <p class="home-sub">Test your knowledge. Beat your score.</p>
+  <div class="cat-grid" id="cat-grid"></div>
+  <div class="diff-row">
+    <button class="diff-btn active" data-d="easy" onclick="setDiff(this)">Easy</button>
+    <button class="diff-btn" data-d="medium" onclick="setDiff(this)">Medium</button>
+    <button class="diff-btn" data-d="hard" onclick="setDiff(this)">Hard</button>
+  </div>
+  <button class="start-btn" onclick="startQuiz()">Start Quiz →</button>
+</div>
+
+<!-- QUIZ -->
+<div id="quiz">
+  <div class="quiz-header">
+    <span class="q-counter" id="q-counter">Q 1 / 10</span>
+    <div class="timer-wrap">⏱ <span class="timer" id="timer">15</span>s</div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress" style="width:0%"></div></div>
+  <div class="question-card"><div class="q-text" id="q-text"></div></div>
+  <div class="options" id="options"></div>
+  <div class="feedback" id="feedback"></div>
+  <button class="next-btn" id="next-btn" onclick="nextQ()">Next →</button>
+  <div style="clear:both"></div>
+</div>
+
+<!-- RESULTS -->
+<div id="results">
+  <div class="result-circle" id="r-circle">
+    <div class="result-pct" id="r-pct">0%</div>
+    <div class="result-lbl">SCORE</div>
+  </div>
+  <div class="result-title" id="r-title">Well done!</div>
+  <p class="result-msg" id="r-msg"></p>
+  <div class="result-grid">
+    <div class="r-stat"><div class="r-stat-val" id="r-correct">0</div><div class="r-stat-lbl">Correct</div></div>
+    <div class="r-stat"><div class="r-stat-val" id="r-time">0s</div><div class="r-stat-lbl">Avg Time</div></div>
+    <div class="r-stat"><div class="r-stat-val" id="r-pts">0</div><div class="r-stat-lbl">Points</div></div>
+  </div>
+  <button class="replay-btn" onclick="replay()">Play Again</button>
+  <button class="home-btn-sm" onclick="goHome()">Change Category</button>
+</div>
+
+</div>
+<script>
+const DATA={
+  science:{icon:'🔬',name:'Science',questions:[
+    {q:'What is the chemical symbol for gold?',o:['Au','Ag','Fe','Cu'],a:0,f:'Au comes from the Latin word "Aurum".',d:'easy'},
+    {q:'How many bones are in the adult human body?',o:['196','206','216','186'],a:1,f:'Babies are born with ~270 bones; many fuse over time.',d:'medium'},
+    {q:'What is the speed of light (approx)?',o:['300,000 km/s','150,000 km/s','450,000 km/s','600,000 km/s'],a:0,f:'299,792,458 m/s to be exact!',d:'easy'},
+    {q:'What planet has the most moons?',o:['Jupiter','Saturn','Uranus','Neptune'],a:1,f:'Saturn has 146 confirmed moons as of 2023.',d:'medium'},
+    {q:'DNA stands for?',o:['Deoxyribose Nucleic Acid','Dioxynucleic Acid','Deoxyribonucleic Acid','Diaminonucleic Acid'],a:2,f:'The double helix was discovered by Watson & Crick in 1953.',d:'easy'},
+    {q:'What is the powerhouse of the cell?',o:['Nucleus','Mitochondria','Ribosome','Golgi body'],a:1,f:'Mitochondria produce ATP via cellular respiration.',d:'easy'},
+    {q:'Which element has atomic number 79?',o:['Platinum','Silver','Gold','Lead'],a:2,f:'Gold (Au) has 79 protons in its nucleus.',d:'hard'},
+    {q:'What is absolute zero in Celsius?',o:['-173.15°C','-273.15°C','-373.15°C','-100°C'],a:1,f:'0 Kelvin = −273.15°C, the coldest theoretically possible temperature.',d:'hard'},
+    {q:'Which gas makes up most of Earth\'s atmosphere?',o:['Oxygen','Carbon Dioxide','Nitrogen','Argon'],a:2,f:'Nitrogen makes up ~78% of Earth\'s atmosphere.',d:'easy'},
+    {q:'What is the half-life of Carbon-14?',o:['1,430 years','5,730 years','14,300 years','570 years'],a:1,f:'C-14 decay is used in radiocarbon dating of organic materials.',d:'hard'},
+  ]},
+  history:{icon:'🏛️',name:'History',questions:[
+    {q:'In which year did World War II end?',o:['1943','1944','1945','1946'],a:2,f:'WWII ended in 1945 — V-E Day (May 8) and V-J Day (Sept 2).',d:'easy'},
+    {q:'Who was the first President of the United States?',o:['John Adams','Benjamin Franklin','Thomas Jefferson','George Washington'],a:3,f:'Washington served two terms from 1789 to 1797.',d:'easy'},
+    {q:'The Great Wall of China was primarily built during which dynasty?',o:['Han','Tang','Ming','Qing'],a:2,f:'Most of the wall we see today was built during the Ming Dynasty (1368–1644).',d:'medium'},
+    {q:'In what year did the Berlin Wall fall?',o:['1987','1988','1989','1991'],a:2,f:'The Berlin Wall fell on November 9, 1989.',d:'easy'},
+    {q:'Who wrote the "Communist Manifesto"?',o:['Lenin & Stalin','Marx & Engels','Mao & Lenin','Engels & Stalin'],a:1,f:'Published in 1848 by Karl Marx and Friedrich Engels.',d:'medium'},
+    {q:'The Renaissance began in which country?',o:['France','England','Italy','Spain'],a:2,f:'The Italian Renaissance began in 14th-century Florence.',d:'medium'},
+    {q:'Who was Cleopatra\'s Roman lover?',o:['Augustus','Julius Caesar','Mark Antony','Nero'],a:1,f:'Julius Caesar and later Mark Antony — two famous relationships!',d:'medium'},
+    {q:'The Magna Carta was signed in which year?',o:['1066','1215','1348','1415'],a:1,f:'King John signed it at Runnymede on June 15, 1215.',d:'hard'},
+    {q:'Which empire was ruled by Genghis Khan?',o:['Ottoman','Byzantine','Mongol','Persian'],a:2,f:'The Mongol Empire became the largest contiguous land empire in history.',d:'easy'},
+    {q:'The Cuban Missile Crisis occurred in which year?',o:['1958','1960','1962','1964'],a:2,f:'13 tense days in October 1962 brought the world close to nuclear war.',d:'medium'},
+  ]},
+  tech:{icon:'💻',name:'Technology',questions:[
+    {q:'What does "HTTP" stand for?',o:['HyperText Transfer Protocol','High Tech Transfer Program','HyperText Transmission Process','Hybrid Transfer Tech Protocol'],a:0,f:'HTTP is the foundation of data communication on the web.',d:'easy'},
+    {q:'Which company created the Python programming language?',o:['Microsoft','Guido van Rossum (individual)','Google','Sun Microsystems'],a:1,f:'Python was created by Guido van Rossum, first released in 1991.',d:'medium'},
+    {q:'What does "CPU" stand for?',o:['Computer Processing Unit','Central Processing Unit','Core Processing Utility','Central Program Unit'],a:1,f:'The CPU is the primary component that executes instructions.',d:'easy'},
+    {q:'In binary, what is 1010?',o:['8','10','12','14'],a:1,f:'1×8 + 0×4 + 1×2 + 0×1 = 10.',d:'medium'},
+    {q:'What year was the first iPhone released?',o:['2005','2006','2007','2008'],a:2,f:'Steve Jobs unveiled the original iPhone on January 9, 2007.',d:'easy'},
+    {q:'What is the main language used for web styling?',o:['HTML','JavaScript','CSS','Python'],a:2,f:'CSS (Cascading Style Sheets) controls the visual presentation of web pages.',d:'easy'},
+    {q:'Which protocol is used to send email?',o:['FTP','HTTP','SMTP','SSH'],a:2,f:'SMTP (Simple Mail Transfer Protocol) handles outgoing email.',d:'medium'},
+    {q:'What is "Big O" notation used for?',o:['Database indexing','Algorithm complexity','Memory allocation','Network speed'],a:1,f:'Big O describes how runtime or space grows relative to input size.',d:'hard'},
+    {q:'What does RAM stand for?',o:['Random Access Memory','Read Access Module','Rapid Application Memory','Random Application Module'],a:0,f:'RAM stores data that the CPU needs quick access to.',d:'easy'},
+    {q:'Who founded Apple Inc.?',o:['Bill Gates','Steve Jobs only','Jobs, Wozniak & Wayne','Jobs & Wozniak'],a:2,f:'Apple was founded on April 1, 1976 by Jobs, Wozniak, and Ronald Wayne.',d:'medium'},
+  ]},
+  geo:{icon:'🌍',name:'Geography',questions:[
+    {q:'What is the capital of Australia?',o:['Sydney','Melbourne','Canberra','Brisbane'],a:2,f:'Canberra, not Sydney! It became the capital in 1913.',d:'medium'},
+    {q:'Which is the longest river in the world?',o:['Amazon','Congo','Mississippi','Nile'],a:3,f:'The Nile stretches ~6,650 km through northeastern Africa.',d:'easy'},
+    {q:'How many countries are in Africa?',o:['48','54','60','66'],a:1,f:'Africa has 54 recognized sovereign countries.',d:'medium'},
+    {q:'Which country has the most natural lakes?',o:['Russia','USA','Finland','Canada'],a:3,f:'Canada has over 60% of the world\'s natural lakes.',d:'hard'},
+    {q:'Mount Everest is part of which mountain range?',o:['Andes','Rocky Mountains','Himalayas','Alps'],a:2,f:'Everest sits on the border of Nepal and Tibet in the Himalayas.',d:'easy'},
+    {q:'What is the smallest country in the world?',o:['Monaco','San Marino','Liechtenstein','Vatican City'],a:3,f:'Vatican City covers just 0.44 km² within Rome, Italy.',d:'easy'},
+    {q:'Which ocean is the largest?',o:['Atlantic','Indian','Arctic','Pacific'],a:3,f:'The Pacific covers ~165 million km², more than all landmasses combined.',d:'easy'},
+    {q:'The Amazon River flows through which continent?',o:['Africa','Asia','South America','North America'],a:2,f:'The Amazon runs ~6,400 km through South America, mostly Brazil.',d:'easy'},
+    {q:'Which country has the longest coastline?',o:['Russia','Australia','Norway','Canada'],a:3,f:'Canada\'s coastline stretches ~202,080 km.',d:'hard'},
+    {q:'The Sahara Desert is located on which continent?',o:['Asia','South America','Australia','Africa'],a:3,f:'The Sahara is the world\'s largest hot desert at ~9 million km².',d:'easy'},
+  ]},
+};
+
+let selectedCat='science',difficulty='easy',questions=[],qIdx=0,score=0,correct=0,timerInt,timeLeft,totalTime=0,answered=false,timings=[];
+
+// Build category cards
+const catGrid=document.getElementById('cat-grid');
+Object.entries(DATA).forEach(([key,cat])=>{
+  const el=document.createElement('div');
+  el.className='cat-card'+(key==='science'?' selected':'');
+  el.dataset.key=key;
+  el.innerHTML=`<div class="cat-icon">${cat.icon}</div><div class="cat-name">${cat.name}</div><div class="cat-count">${cat.questions.length} questions</div>`;
+  el.onclick=()=>{document.querySelectorAll('.cat-card').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');selectedCat=key;};
+  catGrid.appendChild(el);
+});
+
+function setDiff(btn){
+  document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');difficulty=btn.dataset.d;
+}
+
+function startQuiz(){
+  const pool=DATA[selectedCat].questions.filter(q=>q.d===difficulty);
+  if(!pool.length){alert('No questions for this difficulty! Try another.');return;}
+  questions=pool.sort(()=>Math.random()-.5).slice(0,Math.min(10,pool.length));
+  qIdx=0;score=0;correct=0;totalTime=0;timings=[];
+  document.getElementById('home').style.display='none';
+  document.getElementById('quiz').style.display='block';
+  document.getElementById('results').style.display='none';
+  showQ();
+}
+
+function showQ(){
+  if(qIdx>=questions.length){showResults();return;}
+  const q=questions[qIdx];
+  answered=false;
+  document.getElementById('q-counter').textContent=`Q ${qIdx+1} / ${questions.length}`;
+  document.getElementById('progress').style.width=`${(qIdx/questions.length)*100}%`;
+  document.getElementById('q-text').textContent=q.q;
+  document.getElementById('feedback').textContent='';
+  document.getElementById('feedback').className='feedback';
+  document.getElementById('next-btn').style.display='none';
+  const opts=document.getElementById('options');
+  opts.innerHTML='';
+  q.o.forEach((opt,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt';btn.textContent=opt;
+    btn.onclick=()=>answer(i);
+    opts.appendChild(btn);
+  });
+  const tl=difficulty==='easy'?20:difficulty==='medium'?15:10;
+  startTimer(tl);
+}
+
+function startTimer(sec){
+  clearInterval(timerInt);timeLeft=sec;
+  const el=document.getElementById('timer');
+  el.textContent=sec;el.className='timer';
+  timerInt=setInterval(()=>{
+    timeLeft--;el.textContent=timeLeft;
+    if(timeLeft<=5)el.className='timer warn';
+    if(timeLeft<=0){clearInterval(timerInt);timeOut();}
+  },1000);
+}
+
+function timeOut(){
+  if(answered)return;answered=true;
+  const q=questions[qIdx];
+  timings.push(parseInt(document.getElementById('timer').textContent)||0);
+  document.querySelectorAll('.opt').forEach((b,i)=>{b.disabled=true;if(i===q.a)b.classList.add('correct');});
+  const fb=document.getElementById('feedback');
+  fb.textContent='⏱ Time\'s up! '+q.f;fb.className='feedback show-wrong';
+  document.getElementById('next-btn').style.display='block';
+}
+
+function answer(idx){
+  if(answered)return;answered=true;
+  clearInterval(timerInt);
+  const elapsed=(difficulty==='easy'?20:difficulty==='medium'?15:10)-timeLeft;
+  timings.push(elapsed);
+  totalTime+=elapsed;
+  const q=questions[qIdx];
+  document.querySelectorAll('.opt').forEach((b,i)=>{
+    b.disabled=true;
+    if(i===q.a)b.classList.add('correct');
+    else if(i===idx&&idx!==q.a)b.classList.add('wrong');
+  });
+  const fb=document.getElementById('feedback');
+  if(idx===q.a){
+    correct++;
+    const bonus=Math.max(0,timeLeft);
+    score+=10+bonus;
+    fb.textContent='✓ Correct! (+' +(10+bonus)+' pts) '+q.f;
+    fb.className='feedback show-correct';
+  } else {
+    fb.textContent='✗ Incorrect. '+q.f;
+    fb.className='feedback show-wrong';
+  }
+  document.getElementById('next-btn').style.display='block';
+}
+
+function nextQ(){qIdx++;showQ();}
+
+function showResults(){
+  clearInterval(timerInt);
+  document.getElementById('quiz').style.display='none';
+  document.getElementById('results').style.display='block';
+  const pct=Math.round((correct/questions.length)*100);
+  const rc=document.getElementById('r-circle');
+  rc.querySelector('.result-pct').textContent=pct+'%';
+  const titles=['😅 Keep Practicing!','🙂 Getting There!','😊 Good Job!','😎 Great Work!','🏆 Perfect Score!'];
+  const msgs=['Don\'t give up, every expert was once a beginner!','You\'re improving! Review and try again.','Solid performance! A bit more study and you\'ll ace it.','Impressive! You really know your stuff.','Flawless! You\'re a true master of this topic.'];
+  const tier=pct===100?4:pct>=80?3:pct>=60?2:pct>=40?1:0;
+  const colors=['#e8472a','#f59e0b','#3b82f6','#1a9e5c','#7c3aed'];
+  rc.style.borderColor=colors[tier];
+  rc.querySelector('.result-pct').style.color=colors[tier];
+  document.getElementById('r-title').textContent=titles[tier];
+  document.getElementById('r-msg').textContent=msgs[tier];
+  document.getElementById('r-correct').textContent=`${correct}/${questions.length}`;
+  document.getElementById('r-time').textContent=timings.length?Math.round(timings.reduce((a,b)=>a+b,0)/timings.length)+'s':'—';
+  document.getElementById('r-pts').textContent=score;
+}
+
+function replay(){
+  document.getElementById('results').style.display='none';
+  document.getElementById('quiz').style.display='block';
+  startQuiz();
+}
+function goHome(){
+  document.getElementById('results').style.display='none';
+  document.getElementById('home').style.display='block';
+}
+</script>
+</body>
+</html>
